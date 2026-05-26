@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2C2C2A" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1A1A18" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="주간 계획">
+<title>주간 계획</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%232C2C2A'/><text x='90' y='118' font-family='-apple-system,sans-serif' font-size='90' font-weight='600' fill='%23E1F5EE' text-anchor='middle'>주</text></svg>">
+<style>
+  :root {
+    --bg: #FAFAF7; --surface: #FFFFFF; --surface-2: #F5F3EC; --surface-3: #F1EFE8;
+    --border: #E5E3DA; --border-strong: #C9C7BD;
+    --text: #2C2C2A; --text-secondary: #5F5E5A; --text-tertiary: #888780;
+    --work-bg: #E1F5EE; --work-text: #04342C; --work-accent: #0F6E56;
+    --work-soft: #F0FAF6;
+    --life-bg: #FBF6EE; --life-text: #4A3B1B; --life-accent: #854F0B;
+    --life-soft: #FDF9F2;
+    --contact-bg: #F1EFE8; --review-bg: #FFFBEA; --review-text: #8B6B00;
+    --rock-work-bg: #EEEDFE; --rock-work-accent: #534AB7;
+    --rock-life-bg: #F0E6F4; --rock-life-accent: #993556;
+    --danger: #A32D2D; --info: #185FA5; --info-bg: #E6F1FB;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+    --radius: 10px; --radius-sm: 6px;
+    --status-pending: #B4B2A9; --status-doing: #BA7517; --status-doing-bg: #FAEEDA;
+    --status-done: #0F6E56; --status-done-bg: #D8F0E6; --status-pass: #888780;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1A1A18; --surface: #25251F; --surface-2: #2D2D27; --surface-3: #34342C;
+      --border: #3A3A33; --border-strong: #4D4D44;
+      --text: #ECEAE0; --text-secondary: #B4B2A9; --text-tertiary: #888780;
+      --work-bg: #1F3D33; --work-text: #9FE1CB; --work-accent: #5DCAA5;
+      --work-soft: #1A2F28;
+      --life-bg: #3D332A; --life-text: #FAC775; --life-accent: #EF9F27;
+      --life-soft: #2D261E;
+      --contact-bg: #2D2D27; --review-bg: #3D3520; --review-text: #FAC775;
+      --rock-work-bg: #2A2645; --rock-work-accent: #AFA9EC;
+      --rock-life-bg: #3D2333; --rock-life-accent: #ED93B1;
+      --info-bg: #1A3A5C;
+      --status-pending: #5F5E5A; --status-doing: #FAC775; --status-doing-bg: #3D3520;
+      --status-done: #5DCAA5; --status-done-bg: #1F3D33;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", "Noto Sans KR", sans-serif;
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; padding: 0; }
+  input, textarea, select { font: inherit; color: inherit; background: transparent; border: none; outline: none; resize: none; width: 100%; }
+  input::placeholder, textarea::placeholder { color: var(--text-tertiary); opacity: 0.55; }
+
+  .app { max-width: 1280px; margin: 0 auto; padding: 14px; }
+
+  /* ─── Top bar ─── */
+  .topbar { display: flex; align-items: center; gap: 6px; padding: 4px 4px 12px; flex-wrap: wrap; }
+  .topbar h1 { font-size: 18px; font-weight: 600; margin: 0 8px 0 0; flex-shrink: 0; }
+  .week-nav { display: flex; align-items: center; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px; }
+  .week-nav button { padding: 6px 10px; border-radius: 4px; font-size: 13px; color: var(--text-secondary); }
+  .week-nav button:hover { background: var(--surface-2); color: var(--text); }
+  .week-nav .current { font-weight: 500; padding: 6px 10px; color: var(--text); min-width: 120px; text-align: center; font-size: 12px; }
+  .today-jump { padding: 6px 10px; font-size: 11px; color: var(--info); background: var(--info-bg); border-radius: var(--radius-sm); }
+  .actions { display: flex; gap: 4px; margin-left: auto; }
+  .actions button { padding: 6px 10px; font-size: 11px; color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+  .actions button:hover { background: var(--surface-2); color: var(--text); }
+
+  /* ─── View tabs ─── */
+  .view-tabs { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px; }
+  .view-tabs button { padding: 6px 14px; font-size: 12px; border-radius: 4px; color: var(--text-secondary); font-weight: 500; }
+  .view-tabs button.active { background: var(--text); color: var(--bg); }
+
+  /* ─── Weekly card ─── */
+  .weekly-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .section-title { font-size: 10px; letter-spacing: 0.08em; color: var(--text-tertiary); text-transform: uppercase; margin: 0 0 6px; font-weight: 600; }
+  .rocks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .rock-col h3 { font-size: 10px; font-weight: 600; margin: 0 0 6px; color: var(--text-tertiary); letter-spacing: 0.05em; }
+  .rock-item { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 4px; margin-bottom: 2px; }
+  .rock-item.work { background: var(--rock-work-bg); }
+  .rock-item.life { background: var(--rock-life-bg); }
+  .rock-item .check-btn { font-size: 14px; cursor: pointer; user-select: none; flex-shrink: 0; color: var(--text-tertiary); }
+  .rock-item.work.done .check-btn { color: var(--rock-work-accent); }
+  .rock-item.life.done .check-btn { color: var(--rock-life-accent); }
+  .rock-item .n { font-size: 10px; color: var(--text-tertiary); flex-shrink: 0; width: 12px; font-weight: 600; }
+  .rock-item input { font-size: 13px; }
+  .rock-item.work input { color: var(--rock-work-accent); }
+  .rock-item.life input { color: var(--rock-life-accent); }
+  .rock-item.done input { text-decoration: line-through; opacity: 0.6; }
+  .default-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; padding: 6px 8px; background: var(--surface-2); border-radius: var(--radius-sm); align-items: center; }
+  .default-slots .label { font-size: 10px; color: var(--text-tertiary); }
+  .default-slots input { text-align: center; font-size: 11px; color: var(--work-accent); font-weight: 500; padding: 3px; background: transparent; border-radius: 3px; }
+  .default-slots input:focus { background: var(--surface); }
+  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .calendar .cal-day { background: var(--surface-2); border-radius: var(--radius-sm); padding: 5px 6px; min-height: 44px; }
+  .calendar .cal-day.today { background: var(--info-bg); }
+  .calendar .cal-day .dow { font-size: 10px; color: var(--text-tertiary); margin-bottom: 1px; font-weight: 500; }
+  .calendar .cal-day.today .dow { color: var(--info); }
+  .calendar .cal-day textarea { font-size: 11px; min-height: 22px; line-height: 1.3; }
+
+  /* ─── Stats ─── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; margin-bottom: 12px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; }
+  .stat-card .stat-label { font-size: 10px; color: var(--text-tertiary); margin-bottom: 2px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600; }
+  .stat-card .stat-value { font-size: 17px; font-weight: 600; color: var(--text); }
+  .stat-card .stat-sub { font-size: 10px; color: var(--text-secondary); margin-top: 1px; }
+
+  /* ─── Day picker (모바일 + 오늘 탭) ─── */
+  .day-picker { display: flex; gap: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px; margin-bottom: 12px; overflow-x: auto; }
+  .day-picker button { padding: 6px 8px; font-size: 11px; border-radius: 4px; color: var(--text-secondary); flex: 1; min-width: 44px; text-align: center; }
+  .day-picker button .dow { display: block; font-size: 10px; opacity: 0.7; }
+  .day-picker button .dd { display: block; font-weight: 600; font-size: 13px; }
+  .day-picker button.active { background: var(--text); color: var(--bg); }
+  .day-picker button.today { color: var(--info); font-weight: 600; }
+  .day-picker button.today.active { background: var(--info); color: white; }
+
+  /* ─── 주간 탭: 7일 카드 ─── */
+  .weekly-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 12px; }
+  .day-card-mini { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column; min-height: 360px; }
+  .day-card-mini.today { border: 2px solid var(--info); }
+  .day-card-mini .day-header { background: var(--text); color: var(--bg); padding: 5px 8px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 500; }
+  .day-card-mini .day-header .today-badge { background: var(--info); color: white; font-size: 9px; padding: 1px 5px; border-radius: 8px; }
+  .day-card-mini .mini-section { padding: 5px 6px; border-bottom: 1px solid var(--border); }
+  .day-card-mini .mini-section:last-child { border-bottom: none; }
+  .day-card-mini .mini-label { font-size: 9px; color: var(--text-tertiary); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; margin-bottom: 3px; }
+  .day-card-mini .work-block { background: var(--work-soft); }
+  .day-card-mini .life-block { background: var(--life-soft); }
+  .day-card-mini .contact-block { background: var(--contact-bg); }
+  .day-card-mini .review-block { background: var(--review-bg); margin-top: auto; }
+  .day-card-mini .mini-action { display: flex; gap: 3px; align-items: flex-start; margin-bottom: 1px; }
+  .day-card-mini .mini-action .status-mini { font-size: 11px; padding-top: 2px; cursor: pointer; user-select: none; flex-shrink: 0; }
+  .day-card-mini .mini-action .mini-text { flex: 1; font-size: 11px; line-height: 1.3; }
+  .day-card-mini .mini-action.done .mini-text { text-decoration: line-through; opacity: 0.55; }
+  .day-card-mini .mini-action .mini-text textarea { font-size: 11px; min-height: 18px; padding: 1px 3px; line-height: 1.3; }
+  .day-card-mini .mini-contact { font-size: 11px; padding: 1px 0; display: flex; gap: 4px; }
+  .day-card-mini .mini-contact .status-mini { flex-shrink: 0; cursor: pointer; }
+  .day-card-mini .mini-contact span:last-child { flex: 1; }
+  .day-card-mini .mini-contact.done span:last-child { text-decoration: line-through; opacity: 0.55; }
+  .day-card-mini .mini-review-text { font-size: 11px; font-style: italic; color: var(--review-text); }
+
+  /* ─── 오늘 탭: full-width day ─── */
+  .today-view { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .today-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow); }
+  .today-header.is-today { border: 2px solid var(--info); }
+  .today-header h2 { font-size: 18px; margin: 0; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .today-header .today-badge-lg { background: var(--info); color: white; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 500; }
+  .today-header .summary { display: flex; gap: 12px; font-size: 11px; color: var(--text-secondary); }
+  .today-header .summary span strong { color: var(--text); }
+
+  /* WORK 3 슬롯 (가로 또는 세로) */
+  .work-slots-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .work-slot { background: var(--work-bg); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; min-height: 320px; }
+  .work-slot.done { opacity: 0.7; }
+  .slot-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .slot-header .slot-n { font-size: 11px; color: var(--work-accent); opacity: 0.7; font-weight: 600; width: 14px; flex-shrink: 0; }
+  .slot-header .slot-cat input { font-size: 11px; color: var(--work-accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(255,255,255,0.4); padding: 3px 6px; border-radius: 3px; }
+  .slot-header .status-pill { margin-left: auto; flex-shrink: 0; }
+  .slot-action { background: rgba(255,255,255,0.5); border-radius: var(--radius-sm); padding: 8px; margin-bottom: 8px; }
+  .slot-action textarea { font-size: 14px; min-height: 32px; color: var(--work-text); font-weight: 500; line-height: 1.4; }
+  .slot-action.done textarea { text-decoration: line-through; }
+  .wbs-area { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+  .wbs-area .wbs-row { background: rgba(255,255,255,0.35); border-radius: var(--radius-sm); padding: 6px 8px; }
+  .wbs-area .wbs-row .wbs-label { font-size: 9px; color: var(--work-accent); opacity: 0.6; font-weight: 600; letter-spacing: 0.08em; margin-bottom: 2px; }
+  .wbs-area .wbs-row textarea { font-size: 12px; min-height: 28px; color: var(--work-text); line-height: 1.4; }
+  .wbs-area .tasks-row .tasks-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .wbs-area .tasks-row .tasks-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.4); border-radius: 2px; overflow: hidden; max-width: 80px; }
+  .wbs-area .tasks-row .tasks-bar .fill { height: 100%; background: var(--work-accent); transition: width 0.3s; }
+  .wbs-area .tasks-row .task-item { display: flex; align-items: flex-start; gap: 4px; padding: 2px 0; }
+  .wbs-area .tasks-row .task-item .check-btn { font-size: 13px; cursor: pointer; user-select: none; padding-top: 1px; flex-shrink: 0; color: var(--work-accent); opacity: 0.6; }
+  .wbs-area .tasks-row .task-item.done .check-btn { opacity: 1; }
+  .wbs-area .tasks-row .task-item textarea { font-size: 12px; min-height: 20px; padding: 1px 4px; line-height: 1.4; color: var(--work-text); }
+  .wbs-area .tasks-row .task-item.done textarea { text-decoration: line-through; opacity: 0.55; }
+  .wbs-area .tasks-row .task-item .del-btn { font-size: 11px; color: var(--text-tertiary); padding: 2px 4px; opacity: 0; flex-shrink: 0; }
+  .wbs-area .tasks-row .task-item:hover .del-btn, .wbs-area .tasks-row .task-item:focus-within .del-btn { opacity: 1; }
+  .wbs-area .tasks-row .add-task { font-size: 11px; color: var(--work-accent); opacity: 0.7; padding: 2px 4px; margin-top: 2px; }
+  .wbs-area .tasks-row .add-task:hover { opacity: 1; }
+
+  /* Status pill */
+  .status-pill { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 500; cursor: pointer; user-select: none; line-height: 1.2; }
+  .status-pill.pending { background: var(--surface-2); color: var(--status-pending); }
+  .status-pill.doing { background: var(--status-doing-bg); color: var(--status-doing); }
+  .status-pill.done { background: var(--status-done-bg); color: var(--status-done); }
+  .status-pill.pass { background: var(--surface-2); color: var(--status-pass); text-decoration: line-through; }
+
+  /* LIFE 슬롯 */
+  .life-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); }
+  .life-section h3 { font-size: 12px; margin: 0 0 8px; font-weight: 600; color: var(--life-accent); letter-spacing: 0.05em; text-transform: uppercase; }
+  .life-slots { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .life-slot { background: var(--life-bg); border-radius: var(--radius-sm); padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .life-slot .life-cat { font-size: 10px; color: var(--life-accent); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+  .life-slot .life-action-row { display: flex; align-items: flex-start; gap: 6px; }
+  .life-slot .life-action-row .status-pill { flex-shrink: 0; }
+  .life-slot .life-action-row textarea { font-size: 12px; min-height: 24px; color: var(--life-text); line-height: 1.4; }
+  .life-slot.done .life-action-row textarea { text-decoration: line-through; opacity: 0.6; }
+
+  /* 연락 section */
+  .contact-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); }
+  .contact-section h3 { font-size: 12px; margin: 0 0 8px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.05em; text-transform: uppercase; }
+  .contact-list { display: flex; flex-direction: column; gap: 4px; }
+  .contact-item { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; background: var(--contact-bg); border-radius: var(--radius-sm); }
+  .contact-item .check-btn { font-size: 14px; cursor: pointer; user-select: none; padding-top: 1px; flex-shrink: 0; color: var(--text-secondary); }
+  .contact-item.done .check-btn { color: var(--work-accent); }
+  .contact-item.done textarea { text-decoration: line-through; opacity: 0.55; }
+  .contact-item textarea { font-size: 13px; min-height: 22px; line-height: 1.4; }
+  .contact-item .del-btn { font-size: 12px; color: var(--text-tertiary); padding: 2px 4px; opacity: 0; flex-shrink: 0; }
+  .contact-item:hover .del-btn, .contact-item:focus-within .del-btn { opacity: 1; }
+  .add-contact { font-size: 11px; color: var(--text-secondary); padding: 6px 8px; align-self: flex-start; }
+  .add-contact:hover { color: var(--text); }
+
+  /* 회고 section */
+  .review-section { background: var(--review-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); }
+  .review-section h3 { font-size: 12px; margin: 0 0 8px; font-weight: 600; color: var(--review-text); letter-spacing: 0.05em; text-transform: uppercase; }
+  .review-section textarea { font-size: 13px; min-height: 60px; color: var(--review-text); line-height: 1.5; }
+
+  /* ─── 월간 뷰 ─── */
+  .month-view { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 14px; }
+  .month-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .month-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .month-header h2 { font-size: 20px; margin: 0; font-weight: 600; }
+  .month-header .month-nav { padding: 4px 10px; font-size: 16px; color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+  .month-header .month-nav:hover { background: var(--surface-2); color: var(--text); }
+  .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .month-dow { font-size: 10px; color: var(--text-tertiary); text-align: center; padding: 4px 0; font-weight: 600; letter-spacing: 0.05em; }
+  .month-cell { background: var(--surface-2); border-radius: var(--radius-sm); padding: 6px 8px; min-height: 80px; cursor: pointer; position: relative; display: flex; flex-direction: column; gap: 3px; transition: background 0.15s; }
+  .month-cell:hover { background: var(--surface-3); }
+  .month-cell.other-month { opacity: 0.35; }
+  .month-cell.today { background: var(--info-bg); outline: 2px solid var(--info); outline-offset: -2px; }
+  .month-date { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .month-cell.today .month-date { color: var(--info); }
+  .month-bar { height: 3px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
+  .month-bar .fill { height: 100%; background: var(--work-accent); transition: width 0.3s; }
+  .month-info { font-size: 10px; color: var(--work-accent); font-weight: 500; }
+  .month-review-badge { font-size: 10px; color: var(--review-text); position: absolute; top: 6px; right: 6px; font-weight: 600; }
+  .month-rock { font-size: 9px; color: var(--rock-work-accent); line-height: 1.3; margin-top: auto; padding-top: 4px; border-top: 0.5px solid var(--border); font-weight: 500; }
+
+  @media (max-width: 540px) {
+    .month-view { padding: 10px; }
+    .month-cell { min-height: 56px; padding: 4px; gap: 2px; }
+    .month-date { font-size: 11px; }
+    .month-info { font-size: 9px; }
+    .month-rock { font-size: 8px; }
+    .month-review-badge { font-size: 9px; top: 3px; right: 4px; }
+  }
+
+  /* ─── Matrix ─── */
+  .matrix-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
+  .matrix-section h2 { font-size: 13px; margin: 0 0 10px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .matrix-section h2 .badge { font-size: 9px; padding: 2px 6px; background: var(--surface-3); border-radius: 8px; color: var(--text-tertiary); letter-spacing: 0.05em; font-weight: 500; }
+  .matrix { display: grid; grid-template-columns: 70px repeat(4, 1fr); gap: 3px; }
+  .matrix .corner { }
+  .matrix .col-head, .matrix .row-head { font-size: 10px; color: var(--text-tertiary); padding: 4px; text-align: center; font-weight: 600; letter-spacing: 0.05em; background: var(--surface-2); border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+  .matrix .cell { background: var(--surface-2); border-radius: 4px; padding: 4px; min-height: 56px; }
+  .matrix .cell textarea { font-size: 11px; min-height: 48px; line-height: 1.4; }
+  .matrix .col-head.urgent { background: #FCEBEB; color: #791F1F; }
+  .matrix .col-head.high { background: #FAEEDA; color: #633806; }
+  @media (prefers-color-scheme: dark) {
+    .matrix .col-head.urgent { background: #501313; color: #F7C1C1; }
+    .matrix .col-head.high { background: #412402; color: #FAC775; }
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 900px) {
+    .app { padding: 8px; }
+    .topbar h1 { font-size: 16px; }
+    .week-nav .current { min-width: 96px; font-size: 11px; }
+    .actions button { padding: 5px 8px; font-size: 11px; }
+    .rocks-grid { grid-template-columns: 1fr; gap: 8px; }
+    .calendar { font-size: 9px; }
+    .calendar .cal-day textarea { font-size: 10px; }
+    .weekly-grid { grid-template-columns: 1fr; gap: 0; }
+    .day-card-mini { display: none; min-height: auto; }
+    .day-card-mini.visible { display: flex; }
+    .work-slots-row { grid-template-columns: 1fr; }
+    .life-slots { grid-template-columns: 1fr; }
+    .work-slot { min-height: auto; }
+    .matrix { grid-template-columns: 50px repeat(4, 1fr); gap: 2px; }
+    .matrix .col-head, .matrix .row-head { font-size: 9px; padding: 3px; }
+  }
+  @media (max-width: 540px) {
+    .matrix .cell { min-height: 48px; padding: 3px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* show-all on mobile when 주간 tab */
+  body.show-all-days .day-card-mini { display: flex !important; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ════════════════════════════════════════════════════
+// Constants + helpers
+// ════════════════════════════════════════════════════
+const STORAGE_KEY = 'weekly_planner_v2'; // 키는 v2 유지, schema는 v3 migration
+const SCHEMA_VERSION = 3;
+const DAYS_KOR = ['월', '화', '수', '목', '금', '토', '일'];
+const LIFE_LABELS = ['자기계발', '건강', '소셜'];
+const IMPORTANCE = ['안중요','주의','중요','매우중요'];
+const URGENCY = ['매우긴급','긴급','안긴급'];
+const STATUS_ORDER = ['pending','doing','done','pass'];
+const STATUS_LABEL = { pending: '대기', doing: '진행중', done: '완료', pass: '패스' };
+const STATUS_ICON = { pending: '○', doing: '◐', done: '●', pass: '×' };
+
+function todayDate() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+function fmtDate(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function mondayOf(d) {
+  const x = new Date(d);
+  const dow = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - dow);
+  x.setHours(0,0,0,0);
+  return x;
+}
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function weekKey(monday) { return fmtDate(monday); }
+function sameDate(a, b) { return fmtDate(a) === fmtDate(b); }
+function nextStatus(s) { return STATUS_ORDER[(STATUS_ORDER.indexOf(s)+1) % 4]; }
+
+// ════════════════════════════════════════════════════
+// State + storage
+// ════════════════════════════════════════════════════
+function emptyAction(cat) { return { text: '', cat: cat || '', status: 'pending', resources: '', prereq: '', tasks: [] }; }
+function strToTasks(s) {
+  if (!s) return [];
+  return String(s).split('\n').map(line => line.trim()).filter(line => line).map(line => {
+    // "[x]", "[X]", "☑", "✓" 접두어가 있으면 done으로
+    let done = false;
+    let text = line;
+    if (/^(\[x\]|\[X\]|☑|✓|✅)\s*/.test(text)) {
+      done = true;
+      text = text.replace(/^(\[x\]|\[X\]|☑|✓|✅)\s*/, '');
+    } else if (/^(\[\s\]|☐|✘|-)\s*/.test(text)) {
+      text = text.replace(/^(\[\s\]|☐|✘|-)\s*/, '');
+    } else if (/^\d+\.\s*/.test(text)) {
+      text = text.replace(/^\d+\.\s*/, '');
+    }
+    return { text, done };
+  });
+}
+function emptyLifeAction() { return { text: '', status: 'pending' }; }
+function emptyDay() {
+  return {
+    workActions: [emptyAction(), emptyAction(), emptyAction()],
+    lifeActions: [emptyLifeAction(), emptyLifeAction(), emptyLifeAction()],
+    contacts: [],
+    review: '',
+  };
+}
+function emptyMatrixCells() {
+  const cells = {};
+  for (const imp of IMPORTANCE) for (const urg of URGENCY) cells[imp+'|'+urg] = '';
+  return cells;
+}
+function emptyWeek() {
+  return {
+    rocks: { work: [{text:'',done:false},{text:'',done:false},{text:'',done:false}], life: [{text:'',done:false},{text:'',done:false}] },
+    defaultSlots: ['','',''],
+    calendar: ['','','','','','',''],
+    matrix: { idea: emptyMatrixCells(), bookmark: emptyMatrixCells() },
+    days: [emptyDay(), emptyDay(), emptyDay(), emptyDay(), emptyDay(), emptyDay(), emptyDay()],
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.schemaVersion === SCHEMA_VERSION) {
+        return normalizeState(parsed);
+      }
+      // v1 / v2 데이터 마이그레이션 시도
+      if (parsed && parsed.schemaVersion === 1) return migrateV1(parsed);
+      if (parsed && parsed.schemaVersion === 2) return migrateV2to3(parsed);
+    }
+  } catch (e) { console.warn('load failed', e); }
+  return sampleState();
+}
+
+function normalizeState(s) {
+  if (!s.weeks) s.weeks = {};
+  for (const k in s.weeks) {
+    const w = s.weeks[k];
+    if (!w.matrix) w.matrix = { idea: emptyMatrixCells(), bookmark: emptyMatrixCells() };
+    if (!w.matrix.idea) w.matrix.idea = emptyMatrixCells();
+    if (!w.matrix.bookmark) w.matrix.bookmark = emptyMatrixCells();
+    if (!w.defaultSlots) w.defaultSlots = ['','',''];
+    if (!w.rocks) w.rocks = { work: [{text:'',done:false},{text:'',done:false},{text:'',done:false}], life: [{text:'',done:false},{text:'',done:false}] };
+    if (!w.days) w.days = [emptyDay(), emptyDay(), emptyDay(), emptyDay(), emptyDay(), emptyDay(), emptyDay()];
+    for (const d of w.days) {
+      if (!d.workActions) d.workActions = [emptyAction(), emptyAction(), emptyAction()];
+      if (!d.lifeActions) d.lifeActions = [emptyLifeAction(), emptyLifeAction(), emptyLifeAction()];
+      for (const a of d.workActions) {
+        if (typeof a.tasks === 'string') a.tasks = strToTasks(a.tasks);
+        if (!Array.isArray(a.tasks)) a.tasks = [];
+      }
+    }
+  }
+  return s;
+}
+
+function migrateV2to3(v2) {
+  v2.schemaVersion = SCHEMA_VERSION;
+  return normalizeState(v2);
+}
+
+function migrateV1(v1) {
+  const s = { schemaVersion: SCHEMA_VERSION, weeks: {} };
+  for (const k in v1.weeks) {
+    const old = v1.weeks[k];
+    const nw = emptyWeek();
+    // Rocks
+    if (old.rocks) {
+      for (let i = 0; i < 3; i++) nw.rocks.work[i] = { text: (old.rocks.work && old.rocks.work[i]) || '', done: !!(old.rocks.workDone && old.rocks.workDone[i]) };
+      for (let i = 0; i < 2; i++) nw.rocks.life[i] = { text: (old.rocks.life && old.rocks.life[i]) || '', done: !!(old.rocks.lifeDone && old.rocks.lifeDone[i]) };
+    }
+    if (old.slots) nw.defaultSlots = old.slots.slice(0,3);
+    if (old.calendar) nw.calendar = old.calendar.slice(0,7);
+    // Days
+    if (old.days) {
+      for (let i = 0; i < 7 && i < old.days.length; i++) {
+        const od = old.days[i];
+        const nd = emptyDay();
+        for (let j = 0; j < 3; j++) {
+          nd.workActions[j] = {
+            text: (od.action && od.action[j]) || '',
+            cat: nw.defaultSlots[j] || '',
+            status: 'pending',
+            resources: (od.resources && od.resources[j]) || '',
+            prereq: (od.prereq && od.prereq[j]) || '',
+            tasks: strToTasks((od.tasks && od.tasks[j]) || ''),
+          };
+          nd.lifeActions[j] = { text: (od.life && od.life[j]) || '', status: 'pending' };
+        }
+        if (od.contacts) nd.contacts = od.contacts.map(c => ({ checked: !!c.checked, text: c.text || '' }));
+        nd.review = od.review || '';
+        nw.days[i] = nd;
+      }
+    }
+    s.weeks[k] = nw;
+  }
+  // 매트릭스는 v1에서는 global이었음. 현재 week에 옮김
+  if (v1.matrix) {
+    const cur = weekKey(mondayOf(todayDate()));
+    if (!s.weeks[cur]) s.weeks[cur] = emptyWeek();
+    if (v1.matrix.idea) s.weeks[cur].matrix.idea = v1.matrix.idea;
+    if (v1.matrix.bookmark) s.weeks[cur].matrix.bookmark = v1.matrix.bookmark;
+  }
+  return s;
+}
+
+function sampleState() {
+  const s = { schemaVersion: SCHEMA_VERSION, weeks: {} };
+  // 5/11 주
+  const w1 = emptyWeek();
+  w1.rocks.work[0] = { text: '주간계획 수립', done: false };
+  w1.rocks.work[1] = { text: '이호실 대표님 진정', done: false };
+  w1.rocks.life[0] = { text: '이삿짐 (포장이사 5/15-16)', done: false };
+  w1.defaultSlots = ['경영/행정', 'TIPS', '영업'];
+  w1.calendar[4] = '이사 연차';
+  w1.calendar[5] = '포장이사';
+
+  // 5/12 (화, idx=1)
+  w1.days[1].workActions[0] = { text: '계획 짜기 정도', cat: '경영/행정', status: 'pending', resources: '', prereq: '- 메일 footer 변경\n- 자가운전보조금 영업용 차량 변경', tasks: [{text:'자잘한 변경들 적용', done:false}] };
+  w1.days[1].workActions[1] = { text: '사업비 구조', cat: 'TIPS', status: 'pending', resources: '- 인건비 계획 수정\n- CG커버스 지급계획', prereq: '- 제품 개발계획\n- 제품문제상황 정의', tasks: [{text:'인건비 수정 후 전체 금액 변경', done:false}] };
+  w1.days[1].workActions[2] = { text: '해외리드 신제품 연락', cat: '영업', status: 'pending', resources: '- 중동 연락 업뎃', prereq: '- 영문 카탈로그', tasks: [{text:'해외리드 리스트업', done:false}] };
+  w1.days[1].contacts = [
+    { checked: false, text: '커버링/오늘수거 — 수거 가능 여부 확인' },
+    { checked: false, text: '렌트 대표님 — 협업 진행 의사' },
+  ];
+  w1.days[1].lifeActions[0] = { text: 'AI 강의 "CH01. 터미널과 친해지기" (패캠)', status: 'pending' };
+  w1.days[1].lifeActions[2] = { text: '이사 TF - 샌딩기/박스/탄화', status: 'pending' };
+
+  // 5/14 (목, idx=3)
+  w1.days[3].workActions[0] = { text: '제품개발팀 AI 셋업', cat: '제품개발', status: 'done', resources: '- Cowork', prereq: '- 개발 요구사항 및 목표', tasks: [{text:'Walza 연락', done:true}] };
+  w1.days[3].workActions[1] = { text: '인건비 계획 완료', cat: 'TIPS', status: 'doing', resources: '', prereq: '- 제품 개발계획\n- 제품문제상황 정의', tasks: [{text:'재식 상향/인건비 수정', done:true}, {text:'협약연장 관련 전달', done:false}] };
+  w1.days[3].workActions[2] = { text: '(다움) 리테일 템플렛', cat: '위임/팀관리', status: 'pending', resources: '', prereq: '', tasks: [{text:'(다움) CS봇 구축', done:false}] };
+  w1.days[3].contacts = [
+    { checked: true, text: '왈자 — 협업 좋다 답' },
+    { checked: false, text: '커버링/오늘수거 — FU' },
+    { checked: false, text: '렌트/V벤처스 — FU 메일' },
+    { checked: false, text: '에스원 — 답변 보내기' },
+  ];
+  w1.days[3].lifeActions[0] = { text: 'AI 실전 쓸 정도 — 강의 진도+실습', status: 'doing' };
+  w1.days[3].lifeActions[1] = { text: '약 정도만 잘 챙겨먹자', status: 'pending' };
+  w1.days[3].lifeActions[2] = { text: '계획만 잘 짜기', status: 'pending' };
+
+  // 매트릭스 (5/11 주에)
+  w1.matrix.idea['중요|긴급'] = '채용공고 작성 업로드\nKC인증 - 어린이제품';
+  w1.matrix.idea['중요|안긴급'] = 'V벤처스 대표님 FU\n(BR) 스푼의자 제안';
+  w1.matrix.idea['매우중요|긴급'] = 'TIPS 연구노트';
+
+  s.weeks[weekKey(new Date(2026,4,11))] = w1;
+
+  // 5/18 주
+  const w2 = emptyWeek();
+  w2.rocks.work[0] = { text: '세금업무 처리', done: false };
+  w2.calendar = ['14:00 렌트/V 미팅', '11:00 LG관악서비스\n18:00 왈자 미팅', '', '17:30 에스콰이어', '17:00 TAMZ 오프닝', '', '부처님오신날'];
+  s.weeks[weekKey(new Date(2026,4,18))] = w2;
+
+  return s;
+}
+
+let state = loadState();
+let currentMonday = mondayOf(todayDate());
+let currentDayIdx = (new Date().getDay() + 6) % 7;
+let tab = window.innerWidth > 900 ? 'week' : 'today';
+let monthCursor = new Date(); monthCursor.setDate(1);
+
+let saveTimer = null;
+function saveState() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch (e) { console.warn('save failed', e); }
+  }, 400);
+}
+function getWeek(monday) {
+  const k = weekKey(monday);
+  if (!state.weeks[k]) state.weeks[k] = emptyWeek();
+  return state.weeks[k];
+}
+
+// ════════════════════════════════════════════════════
+// Render helpers
+// ════════════════════════════════════════════════════
+function el(tag, attrs, ...children) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) {
+    if (k === 'class') e.className = attrs[k];
+    else if (k === 'style') e.style.cssText = attrs[k];
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
+    else if (k === 'html') e.innerHTML = attrs[k];
+    else e.setAttribute(k, attrs[k]);
+  }
+  for (const c of children) {
+    if (c == null || c === false) continue;
+    if (Array.isArray(c)) c.forEach(cc => { if (cc != null) e.appendChild(typeof cc === 'string' ? document.createTextNode(cc) : cc); });
+    else e.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(c) : c);
+  }
+  return e;
+}
+function autoResize(ta) { ta.style.height = 'auto'; ta.style.height = Math.max(ta.scrollHeight, 18) + 'px'; }
+function taField(value, placeholder, onChange) {
+  const t = el('textarea', { rows: 1, placeholder: placeholder || '' });
+  t.value = value || '';
+  setTimeout(() => autoResize(t), 0);
+  t.addEventListener('input', () => { autoResize(t); onChange(t.value); saveState(); });
+  return t;
+}
+function txtField(value, placeholder, onChange) {
+  const i = el('input', { type: 'text', placeholder: placeholder || '' });
+  i.value = value || '';
+  i.addEventListener('input', () => { onChange(i.value); saveState(); });
+  return i;
+}
+function statusPill(status, onChange) {
+  const btn = el('button', {
+    class: 'status-pill ' + status,
+    title: '클릭하여 상태 변경: ' + STATUS_LABEL[status],
+    onclick: (ev) => { ev.stopPropagation(); onChange(nextStatus(status)); }
+  }, STATUS_ICON[status] + ' ' + STATUS_LABEL[status]);
+  return btn;
+}
+
+// ════════════════════════════════════════════════════
+// Render
+// ════════════════════════════════════════════════════
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  app.appendChild(renderTopbar());
+  if (tab === 'month') {
+    app.appendChild(renderMonthView());
+    document.body.classList.remove('show-all-days');
+  } else {
+    app.appendChild(renderStats());
+    app.appendChild(renderWeeklyCard());
+    if (tab === 'week') {
+      if (window.innerWidth <= 900) app.appendChild(renderDayPicker());
+      app.appendChild(renderWeeklyGrid());
+      document.body.classList.add('show-all-days');
+      if (window.innerWidth <= 900) document.body.classList.remove('show-all-days');
+    } else {
+      app.appendChild(renderDayPicker());
+      app.appendChild(renderTodayView());
+      document.body.classList.remove('show-all-days');
+    }
+    const w = getWeek(currentMonday);
+    app.appendChild(renderMatrix('아이디어', w.matrix.idea));
+    app.appendChild(renderMatrix('북마크', w.matrix.bookmark));
+  }
+  app.appendChild(el('div', { style: 'text-align:center;padding:20px 0;font-size:11px;color:var(--text-tertiary);' },
+    '데이터는 이 브라우저에만 저장. 다른 기기 쓰려면 Export → Import.'));
+}
+
+function renderTopbar() {
+  const monday = currentMonday;
+  const sunday = addDays(monday, 6);
+  const range = (monday.getMonth()+1) + '/' + monday.getDate() + ' — ' + (sunday.getMonth()+1) + '/' + sunday.getDate();
+  const isCurrent = sameDate(monday, mondayOf(todayDate()));
+  return el('div', { class: 'topbar' },
+    el('h1', null, '주간 계획'),
+    el('div', { class: 'week-nav' },
+      el('button', { onclick: () => { currentMonday = addDays(currentMonday, -7); render(); } }, '‹'),
+      el('div', { class: 'current' }, range),
+      el('button', { onclick: () => { currentMonday = addDays(currentMonday, 7); render(); } }, '›'),
+    ),
+    !isCurrent && el('button', { class: 'today-jump', onclick: () => {
+      currentMonday = mondayOf(todayDate()); currentDayIdx = (new Date().getDay()+6)%7; render();
+    } }, '이번 주로'),
+    el('div', { class: 'view-tabs' },
+      el('button', { class: tab === 'month' ? 'active' : '', onclick: () => { tab = 'month'; render(); } }, '월간'),
+      el('button', { class: tab === 'week' ? 'active' : '', onclick: () => { tab = 'week'; render(); } }, '주간'),
+      el('button', { class: tab === 'today' ? 'active' : '', onclick: () => { tab = 'today'; render(); } }, '오늘'),
+    ),
+    el('div', { class: 'actions' },
+      el('button', { onclick: exportJSON }, 'Export'),
+      el('button', { onclick: importJSON }, 'Import'),
+    ),
+  );
+}
+
+function renderStats() {
+  const w = getWeek(currentMonday);
+  const workTotal = w.rocks.work.filter(r => r.text.trim()).length;
+  const workDone = w.rocks.work.filter(r => r.done && r.text.trim()).length;
+  const lifeTotal = w.rocks.life.filter(r => r.text.trim()).length;
+  const lifeDone = w.rocks.life.filter(r => r.done && r.text.trim()).length;
+  let actionsTotal = 0, actionsDone = 0;
+  for (const d of w.days) {
+    for (const a of d.workActions) if (a.text.trim()) { actionsTotal++; if (a.status === 'done') actionsDone++; }
+    for (const a of d.lifeActions) if (a.text.trim()) { actionsTotal++; if (a.status === 'done') actionsDone++; }
+  }
+  const reviewed = w.days.filter(d => d.review.trim()).length;
+  return el('div', { class: 'stats-row' },
+    el('div', { class: 'stat-card' },
+      el('div', { class: 'stat-label' }, 'WORK Rock'),
+      el('div', { class: 'stat-value' }, workDone + ' / ' + (workTotal || 0)),
+      el('div', { class: 'stat-sub' }, workTotal > 0 ? Math.round(workDone/workTotal*100) + '% 완료' : '미설정'),
+    ),
+    el('div', { class: 'stat-card' },
+      el('div', { class: 'stat-label' }, 'LIFE Rock'),
+      el('div', { class: 'stat-value' }, lifeDone + ' / ' + (lifeTotal || 0)),
+      el('div', { class: 'stat-sub' }, lifeTotal > 0 ? Math.round(lifeDone/lifeTotal*100) + '% 완료' : '미설정'),
+    ),
+    el('div', { class: 'stat-card' },
+      el('div', { class: 'stat-label' }, '이번 주 액션'),
+      el('div', { class: 'stat-value' }, actionsDone + ' / ' + actionsTotal),
+      el('div', { class: 'stat-sub' }, actionsTotal > 0 ? Math.round(actionsDone/actionsTotal*100) + '% 완료' : '비어있음'),
+    ),
+    el('div', { class: 'stat-card' },
+      el('div', { class: 'stat-label' }, '회고'),
+      el('div', { class: 'stat-value' }, reviewed + ' / 7'),
+      el('div', { class: 'stat-sub' }, '한 줄씩'),
+    ),
+  );
+}
+
+function renderWeeklyCard() {
+  const w = getWeek(currentMonday);
+  const today = todayDate();
+
+  const workCol = el('div', { class: 'rock-col' },
+    el('h3', null, 'WORK · ROCKS'),
+    ...[0,1,2].map(i => {
+      const r = w.rocks.work[i];
+      return el('div', { class: 'rock-item work' + (r.done ? ' done' : '') },
+        el('span', { class: 'check-btn', onclick: () => { r.done = !r.done; saveState(); render(); } }, r.done ? '☑' : '☐'),
+        el('span', { class: 'n' }, String(i+1)),
+        txtField(r.text, 'Rock ' + (i+1), v => { r.text = v; }),
+      );
+    }),
+  );
+
+  const lifeCol = el('div', { class: 'rock-col' },
+    el('h3', null, 'LIFE · ROCKS'),
+    ...[0,1].map(i => {
+      const r = w.rocks.life[i];
+      return el('div', { class: 'rock-item life' + (r.done ? ' done' : '') },
+        el('span', { class: 'check-btn', onclick: () => { r.done = !r.done; saveState(); render(); } }, r.done ? '☑' : '☐'),
+        el('span', { class: 'n' }, String(i+1)),
+        txtField(r.text, 'Rock ' + (i+1), v => { r.text = v; }),
+      );
+    }),
+  );
+
+  const defaults = el('div', { class: 'default-slots' },
+    el('div', { class: 'label' }, '추천 WORK 슬롯 (각 day에서 override 가능)'),
+    ...[0,1,2].map(i =>
+      txtField(w.defaultSlots[i], '카테고리 ' + (i+1), v => { w.defaultSlots[i] = v; })
+    ),
+  );
+
+  const calRow = el('div', { class: 'calendar' });
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(currentMonday, i);
+    const isToday = sameDate(d, today);
+    calRow.appendChild(el('div', { class: 'cal-day' + (isToday ? ' today' : '') },
+      el('div', { class: 'dow' }, DAYS_KOR[i] + ' ' + d.getDate()),
+      taField(w.calendar[i], '', v => { w.calendar[i] = v; }),
+    ));
+  }
+
+  return el('section', { class: 'weekly-card' },
+    el('div', { class: 'rocks-grid' }, workCol, lifeCol),
+    defaults,
+    el('div', { class: 'section-title' }, '캘린더'),
+    calRow,
+  );
+}
+
+function renderDayPicker() {
+  const today = todayDate();
+  return el('div', { class: 'day-picker' },
+    ...[0,1,2,3,4,5,6].map(i => {
+      const d = addDays(currentMonday, i);
+      const isToday = sameDate(d, today);
+      const isActive = i === currentDayIdx;
+      return el('button', {
+        class: (isActive ? 'active ' : '') + (isToday ? 'today' : ''),
+        onclick: () => { currentDayIdx = i; render(); }
+      },
+        el('span', { class: 'dow' }, DAYS_KOR[i]),
+        el('span', { class: 'dd' }, String(d.getDate())),
+      );
+    }),
+  );
+}
+
+// ─── 주간 탭: 7일 mini cards ───
+function renderWeeklyGrid() {
+  const w = getWeek(currentMonday);
+  const today = todayDate();
+  const grid = el('div', { class: 'weekly-grid' });
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(currentMonday, i);
+    grid.appendChild(renderMiniDayCard(w.days[i], d, i, sameDate(d, today), i === currentDayIdx));
+  }
+  return grid;
+}
+
+function renderMiniDayCard(day, date, dayIdx, isToday, isPickerActive) {
+  const card = el('div', { class: 'day-card-mini' + (isToday ? ' today' : '') + (isPickerActive ? ' visible' : '') });
+  card.appendChild(el('div', { class: 'day-header' },
+    el('span', null, DAYS_KOR[dayIdx] + ' ' + (date.getMonth()+1) + '/' + date.getDate()),
+    isToday ? el('span', { class: 'today-badge' }, '오늘') : null,
+  ));
+  // WORK actions (mini)
+  const workBlock = el('div', { class: 'mini-section work-block' });
+  workBlock.appendChild(el('div', { class: 'mini-label' }, 'WORK'));
+  for (let j = 0; j < 3; j++) {
+    const a = day.workActions[j];
+    workBlock.appendChild(el('div', { class: 'mini-action' + (a.status === 'done' ? ' done' : '') },
+      el('span', {
+        class: 'status-mini',
+        title: STATUS_LABEL[a.status],
+        onclick: (ev) => { ev.stopPropagation(); a.status = nextStatus(a.status); saveState(); render(); }
+      }, STATUS_ICON[a.status]),
+      el('div', { class: 'mini-text' }, taField(a.text, '액션', v => { a.text = v; })),
+    ));
+  }
+  card.appendChild(workBlock);
+
+  // Contacts (mini)
+  const contactBlock = el('div', { class: 'mini-section contact-block' });
+  contactBlock.appendChild(el('div', { class: 'mini-label' }, '연락 (' + day.contacts.length + ')'));
+  for (const c of day.contacts.slice(0, 4)) {
+    contactBlock.appendChild(el('div', { class: 'mini-contact' + (c.checked ? ' done' : '') },
+      el('span', { class: 'status-mini', onclick: () => { c.checked = !c.checked; saveState(); render(); } }, c.checked ? '●' : '○'),
+      el('span', null, c.text || '(빈 항목)'),
+    ));
+  }
+  if (day.contacts.length > 4) contactBlock.appendChild(el('div', { style: 'font-size:10px;color:var(--text-tertiary);margin-top:2px;' }, '+' + (day.contacts.length - 4) + ' 더'));
+  card.appendChild(contactBlock);
+
+  // LIFE (mini)
+  const lifeBlock = el('div', { class: 'mini-section life-block' });
+  lifeBlock.appendChild(el('div', { class: 'mini-label' }, 'LIFE'));
+  for (let j = 0; j < 3; j++) {
+    const a = day.lifeActions[j];
+    lifeBlock.appendChild(el('div', { class: 'mini-action' + (a.status === 'done' ? ' done' : '') },
+      el('span', { class: 'status-mini', onclick: (ev) => { ev.stopPropagation(); a.status = nextStatus(a.status); saveState(); render(); } }, STATUS_ICON[a.status]),
+      el('div', { class: 'mini-text' },
+        el('span', { style: 'font-size:9px;color:var(--life-accent);opacity:0.7;display:block;font-weight:600;' }, LIFE_LABELS[j]),
+        taField(a.text, '', v => { a.text = v; }),
+      ),
+    ));
+  }
+  card.appendChild(lifeBlock);
+
+  // 회고 (mini)
+  const reviewBlock = el('div', { class: 'mini-section review-block' });
+  reviewBlock.appendChild(el('div', { class: 'mini-label' }, '회고'));
+  reviewBlock.appendChild(taField(day.review, '한 줄', v => { day.review = v; }));
+  card.appendChild(reviewBlock);
+
+  return card;
+}
+
+// ─── 오늘 탭: full-width day ───
+function renderTodayView() {
+  const w = getWeek(currentMonday);
+  const day = w.days[currentDayIdx];
+  const date = addDays(currentMonday, currentDayIdx);
+  const isToday = sameDate(date, todayDate());
+  const view = el('div', { class: 'today-view' });
+
+  // Header
+  const workDone = day.workActions.filter(a => a.status === 'done' && a.text.trim()).length;
+  const workTotal = day.workActions.filter(a => a.text.trim()).length;
+  const lifeDone = day.lifeActions.filter(a => a.status === 'done' && a.text.trim()).length;
+  const lifeTotal = day.lifeActions.filter(a => a.text.trim()).length;
+  const contactDone = day.contacts.filter(c => c.checked).length;
+  view.appendChild(el('div', { class: 'today-header' + (isToday ? ' is-today' : '') },
+    el('h2', null,
+      DAYS_KOR[currentDayIdx] + ' ' + (date.getMonth()+1) + '/' + date.getDate(),
+      isToday ? el('span', { class: 'today-badge-lg' }, '오늘') : null,
+    ),
+    el('div', { class: 'summary' },
+      el('span', null, 'WORK ', el('strong', null, workDone + '/' + workTotal)),
+      el('span', null, 'LIFE ', el('strong', null, lifeDone + '/' + lifeTotal)),
+      el('span', null, '연락 ', el('strong', null, contactDone + '/' + day.contacts.length)),
+    ),
+  ));
+
+  // WORK 3 슬롯 (가로)
+  const workRow = el('div', { class: 'work-slots-row' });
+  for (let j = 0; j < 3; j++) {
+    workRow.appendChild(renderWorkSlot(day, j, w));
+  }
+  view.appendChild(workRow);
+
+  // 연락
+  const contactSec = el('section', { class: 'contact-section' },
+    el('h3', null, '연락'),
+    el('div', { class: 'contact-list' },
+      ...day.contacts.map((c, idx) => el('div', { class: 'contact-item' + (c.checked ? ' done' : '') },
+        el('span', { class: 'check-btn', onclick: () => { c.checked = !c.checked; saveState(); render(); } }, c.checked ? '☑' : '☐'),
+        taField(c.text, '누구 — 무엇', v => { c.text = v; }),
+        el('button', { class: 'del-btn', onclick: () => { day.contacts.splice(idx, 1); saveState(); render(); } }, '×'),
+      )),
+      el('button', { class: 'add-contact', onclick: () => { day.contacts.push({ checked: false, text: '' }); saveState(); render(); } }, '+ 연락 추가'),
+    ),
+  );
+  view.appendChild(contactSec);
+
+  // LIFE
+  const lifeSec = el('section', { class: 'life-section' },
+    el('h3', null, 'LIFE'),
+    el('div', { class: 'life-slots' },
+      ...LIFE_LABELS.map((lab, j) => {
+        const a = day.lifeActions[j];
+        return el('div', { class: 'life-slot' + (a.status === 'done' ? ' done' : '') },
+          el('div', { class: 'life-cat' }, lab),
+          el('div', { class: 'life-action-row' },
+            statusPill(a.status, ns => { a.status = ns; saveState(); render(); }),
+            taField(a.text, '액션 (선택)', v => { a.text = v; }),
+          ),
+        );
+      }),
+    ),
+  );
+  view.appendChild(lifeSec);
+
+  // 회고
+  view.appendChild(el('section', { class: 'review-section' },
+    el('h3', null, '회고'),
+    taField(day.review, '오늘 무엇이 잘 됐고 무엇이 안 됐나 — 내일 계획의 입력값', v => { day.review = v; }),
+  ));
+
+  return view;
+}
+
+function renderWorkSlot(day, j, week) {
+  const a = day.workActions[j];
+  const slot = el('div', { class: 'work-slot' + (a.status === 'done' ? ' done' : '') });
+  // Header
+  const defaultCat = week.defaultSlots[j] || '';
+  slot.appendChild(el('div', { class: 'slot-header' },
+    el('span', { class: 'slot-n' }, String(j+1)),
+    el('div', { class: 'slot-cat', style: 'flex:1;min-width:0;' }, txtField(a.cat || defaultCat, defaultCat || ('WORK ' + (j+1)), v => { a.cat = v; })),
+    statusPill(a.status, ns => { a.status = ns; saveState(); render(); }),
+  ));
+  // Action text
+  slot.appendChild(el('div', { class: 'slot-action' + (a.status === 'done' ? ' done' : '') },
+    taField(a.text, '오늘 끝낼 한 가지', v => { a.text = v; })
+  ));
+  // WBS area (R/P/T)
+  const wbsArea = el('div', { class: 'wbs-area' });
+  wbsArea.appendChild(el('div', { class: 'wbs-row' },
+    el('div', { class: 'wbs-label' }, 'R · 리소스'),
+    taField(a.resources, '필요한 것', v => { a.resources = v; }),
+  ));
+  wbsArea.appendChild(el('div', { class: 'wbs-row' },
+    el('div', { class: 'wbs-label' }, 'P · 사전조건'),
+    taField(a.prereq, '시작 전 필요', v => { a.prereq = v; }),
+  ));
+  // Tasks: 동적 list + 체크박스 + 진행률
+  const tasksDone = a.tasks.filter(t => t.done).length;
+  const tasksTotal = a.tasks.length;
+  const pct = tasksTotal > 0 ? Math.round(tasksDone/tasksTotal*100) : 0;
+  const tasksRow = el('div', { class: 'wbs-row tasks-row' });
+  const tasksHeader = el('div', { class: 'tasks-header' },
+    el('div', { class: 'wbs-label', style: 'margin-bottom:0;' }, 'T · 할 일' + (tasksTotal > 0 ? `  ${tasksDone}/${tasksTotal} · ${pct}%` : '')),
+  );
+  if (tasksTotal > 0) tasksHeader.appendChild(el('div', { class: 'tasks-bar' }, el('div', { class: 'fill', style: 'width:' + pct + '%;' })));
+  tasksRow.appendChild(tasksHeader);
+  for (let ti = 0; ti < a.tasks.length; ti++) {
+    const t = a.tasks[ti];
+    const idx = ti;
+    tasksRow.appendChild(el('div', { class: 'task-item' + (t.done ? ' done' : '') },
+      el('span', { class: 'check-btn', onclick: () => { t.done = !t.done; saveState(); render(); } }, t.done ? '☑' : '☐'),
+      taField(t.text, '할 일', v => { t.text = v; }),
+      el('button', { class: 'del-btn', onclick: () => { a.tasks.splice(idx, 1); saveState(); render(); } }, '×'),
+    ));
+  }
+  tasksRow.appendChild(el('button', { class: 'add-task', onclick: () => { a.tasks.push({text:'',done:false}); saveState(); render(); } }, '+ 할 일 추가'));
+  wbsArea.appendChild(tasksRow);
+  slot.appendChild(wbsArea);
+  return slot;
+}
+
+function renderMatrix(title, cells) {
+  const filled = Object.values(cells).filter(v => v && v.trim()).length;
+  const grid = el('div', { class: 'matrix' }, el('div', { class: 'corner' }));
+  for (let i = 0; i < IMPORTANCE.length; i++) {
+    const imp = IMPORTANCE[i];
+    grid.appendChild(el('div', { class: 'col-head' + (i >= 2 ? ' high' : '') }, imp));
+  }
+  for (const urg of URGENCY) {
+    grid.appendChild(el('div', { class: 'row-head' + (urg === '매우긴급' ? ' urgent' : '') }, urg));
+    for (const imp of IMPORTANCE) {
+      const key = imp + '|' + urg;
+      grid.appendChild(el('div', { class: 'cell' }, taField(cells[key], '', v => { cells[key] = v; })));
+    }
+  }
+  return el('section', { class: 'matrix-section' },
+    el('h2', null, el('span', null, title), el('span', { class: 'badge' }, filled + ' 항목 · 이 주의')),
+    grid,
+  );
+}
+
+// ─── 월간 뷰 ───
+function renderMonthView() {
+  const m = new Date(monthCursor);
+  m.setDate(1); m.setHours(0,0,0,0);
+  const firstMonday = mondayOf(m);
+  const lastDay = new Date(m.getFullYear(), m.getMonth()+1, 0);
+  const lastSunday = addDays(mondayOf(lastDay), 6);
+  const totalWeeks = Math.round((lastSunday - firstMonday) / (7*24*3600*1000)) + 1;
+  const isCurrentMonth = m.getFullYear() === todayDate().getFullYear() && m.getMonth() === todayDate().getMonth();
+
+  const header = el('div', { class: 'month-header' },
+    el('button', { class: 'month-nav', onclick: () => { monthCursor = new Date(m.getFullYear(), m.getMonth()-1, 1); render(); } }, '‹'),
+    el('h2', null, m.getFullYear() + '. ' + (m.getMonth()+1)),
+    el('button', { class: 'month-nav', onclick: () => { monthCursor = new Date(m.getFullYear(), m.getMonth()+1, 1); render(); } }, '›'),
+    !isCurrentMonth && el('button', { class: 'today-jump', onclick: () => { monthCursor = new Date(); monthCursor.setDate(1); render(); } }, '이번 달로'),
+  );
+
+  const grid = el('div', { class: 'month-grid' });
+  // 요일 헤더
+  for (const dow of DAYS_KOR) grid.appendChild(el('div', { class: 'month-dow' }, dow));
+
+  // 한 달 통계 누적
+  let monthTotal = 0, monthDone = 0, reviewDays = 0;
+
+  for (let wi = 0; wi < totalWeeks; wi++) {
+    const weekMonday = addDays(firstMonday, wi * 7);
+    const wk = state.weeks[weekKey(weekMonday)] || null;
+    for (let di = 0; di < 7; di++) {
+      const date = addDays(weekMonday, di);
+      const isThisMonth = date.getMonth() === m.getMonth();
+      const isToday = sameDate(date, todayDate());
+      const day = wk ? wk.days[di] : null;
+      let actionsTotal = 0, actionsDone = 0;
+      let taskTotal = 0, taskDone = 0;
+      let hasReview = false;
+      if (day && isThisMonth) {
+        for (const a of day.workActions) if (a.text.trim()) {
+          actionsTotal++;
+          if (a.status === 'done') actionsDone++;
+          for (const t of a.tasks) { taskTotal++; if (t.done) taskDone++; }
+        }
+        for (const a of day.lifeActions) if (a.text.trim()) {
+          actionsTotal++;
+          if (a.status === 'done') actionsDone++;
+        }
+        hasReview = !!day.review.trim();
+        if (hasReview) reviewDays++;
+        monthTotal += actionsTotal;
+        monthDone += actionsDone;
+      } else if (day) {
+        for (const a of day.workActions) if (a.text.trim()) { actionsTotal++; if (a.status === 'done') actionsDone++; }
+      }
+      const pct = actionsTotal > 0 ? Math.round(actionsDone/actionsTotal*100) : 0;
+      const rock1 = wk && wk.rocks && wk.rocks.work[0] && wk.rocks.work[0].text ? wk.rocks.work[0].text : '';
+
+      const cellChildren = [
+        el('div', { class: 'month-date' }, String(date.getDate())),
+      ];
+      if (actionsTotal > 0) {
+        cellChildren.push(el('div', { class: 'month-bar' }, el('div', { class: 'fill', style: 'width:' + pct + '%;' })));
+        cellChildren.push(el('div', { class: 'month-info' }, actionsDone + '/' + actionsTotal + (taskTotal > 0 ? ' · T ' + taskDone + '/' + taskTotal : '')));
+      }
+      if (hasReview) cellChildren.push(el('div', { class: 'month-review-badge' }, '✓ 회고'));
+      if (di === 0 && rock1 && isThisMonth) cellChildren.push(el('div', { class: 'month-rock' }, rock1.length > 16 ? rock1.substring(0, 15) + '…' : rock1));
+
+      grid.appendChild(el('div', {
+        class: 'month-cell' + (isThisMonth ? '' : ' other-month') + (isToday ? ' today' : ''),
+        title: DAYS_KOR[di] + ' ' + (date.getMonth()+1) + '/' + date.getDate() + ' — 클릭하여 오늘 탭으로',
+        onclick: () => {
+          currentMonday = mondayOf(date);
+          currentDayIdx = (date.getDay()+6) % 7;
+          tab = 'today';
+          render();
+        }
+      }, ...cellChildren));
+    }
+  }
+
+  // 한 달 요약 카드
+  const monthPct = monthTotal > 0 ? Math.round(monthDone/monthTotal*100) : 0;
+  const summary = el('div', { class: 'month-summary' },
+    el('div', { class: 'stat-card' },
+      el('div', { class: 'stat-label' }, '이번 달 액션'),
+      el('div', { class: 'stat-value' }, monthDone + ' / ' + monthTotal),
+      el('div', { class: 'stat-sub' }, monthPct + '% 완료'),
+    ),
+    el('div', { class: 'stat-card' },
+      el('div', { class: 'stat-label' }, '회고 작성'),
+      el('div', { class: 'stat-value' }, reviewDays + ' 일'),
+      el('div', { class: 'stat-sub' }, lastDay.getDate() + '일 중'),
+    ),
+  );
+
+  return el('section', { class: 'month-view' },
+    summary,
+    header,
+    grid,
+    el('div', { style: 'font-size:11px;color:var(--text-tertiary);margin-top:10px;text-align:center;' }, '셀 클릭 → 그 날의 오늘 탭으로 이동'),
+  );
+}
+
+// ════════════════════════════════════════════════════
+// Export / Import
+// ════════════════════════════════════════════════════
+async function exportJSON() {
+  const json = JSON.stringify(state, null, 2);
+  const filename = 'weekly_planner_' + fmtDate(new Date()) + '.json';
+  const blob = new Blob([json], { type: 'application/json' });
+  // 모바일 native share sheet 시도 (iOS Safari, Android Chrome 지원)
+  try {
+    const file = new File([blob], filename, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: '주간 계획 백업', text: filename });
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return; // 사용자 share 취소
+    console.warn('share failed, fallback to download:', e);
+  }
+  // Fallback: 일반 다운로드
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+function importJSON() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        const parsed = JSON.parse(fr.result);
+        if (!parsed.schemaVersion) throw new Error('invalid');
+        if (!confirm('현재 데이터를 덮어씁니다. 진행할까요?')) return;
+        if (parsed.schemaVersion === 1) state = migrateV1(parsed);
+        else if (parsed.schemaVersion === SCHEMA_VERSION) state = parsed;
+        else throw new Error('지원하지 않는 schema version: ' + parsed.schemaVersion);
+        saveState(); render(); alert('Import 완료');
+      } catch (e) { alert('Import 실패: ' + e.message); }
+    };
+    fr.readAsText(f);
+  };
+  inp.click();
+}
+
+// ════════════════════════════════════════════════════
+// PWA service worker register (호스팅 환경에서만)
+// ════════════════════════════════════════════════════
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW register failed:', e));
+  });
+}
+
+// ════════════════════════════════════════════════════
+// Init
+// ════════════════════════════════════════════════════
+window.addEventListener('resize', () => render());
+render();
+</script>
+</body>
+</html>
