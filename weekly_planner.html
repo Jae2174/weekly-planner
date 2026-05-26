@@ -57,6 +57,15 @@
 
   .app { max-width: 1280px; margin: 0 auto; padding: 14px; }
 
+  /* ─── Login / Loading ─── */
+  .login-screen, .loading-screen { min-height: 80vh; display: flex; align-items: center; justify-content: center; }
+  .loading-screen { color: var(--text-tertiary); font-size: 13px; }
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 40px 32px; max-width: 400px; text-align: center; box-shadow: var(--shadow); }
+  .login-card h1 { font-size: 22px; margin: 0 0 12px; font-weight: 600; }
+  .login-card p { font-size: 13px; color: var(--text-secondary); margin: 0 0 24px; line-height: 1.6; }
+  .google-btn { padding: 12px 32px; background: var(--text); color: var(--bg); border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+  .google-btn:hover { opacity: 0.88; }
+
   /* ─── Top bar ─── */
   .topbar { display: flex; align-items: center; gap: 6px; padding: 4px 4px 12px; flex-wrap: wrap; }
   .topbar h1 { font-size: 18px; font-weight: 600; margin: 0 8px 0 0; flex-shrink: 0; }
@@ -291,11 +300,36 @@
 <body>
 <div class="app" id="app"></div>
 
-<script>
+<script type="module">
+// ════════════════════════════════════════════════════
+// Firebase init
+// ════════════════════════════════════════════════════
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA0SxQUphE_YwYGRvRN4p7ilzWcCYRYdWQ",
+  authDomain: "weekly-planner-60203.firebaseapp.com",
+  projectId: "weekly-planner-60203",
+  storageBucket: "weekly-planner-60203.firebasestorage.app",
+  messagingSenderId: "438603719770",
+  appId: "1:438603719770:web:1c07a67967a6978dce6463",
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+const provider = new GoogleAuthProvider();
+
+let currentUser = null;
+let authResolved = false;
+let unsubscribeUserDoc = null;
+let suppressSaveOnce = false;
+
 // ════════════════════════════════════════════════════
 // Constants + helpers
 // ════════════════════════════════════════════════════
-const STORAGE_KEY = 'weekly_planner_v2'; // 키는 v2 유지, schema는 v3 migration
+const STORAGE_KEY = 'weekly_planner_v2'; // local offline cache
 const SCHEMA_VERSION = 3;
 const DAYS_KOR = ['월', '화', '수', '목', '금', '토', '일'];
 const LIFE_LABELS = ['자기계발', '건강', '소셜'];
@@ -504,7 +538,7 @@ function sampleState() {
   return s;
 }
 
-let state = loadState();
+let state = { schemaVersion: SCHEMA_VERSION, weeks: {} };
 let currentMonday = mondayOf(todayDate());
 let currentDayIdx = (new Date().getDay() + 6) % 7;
 let tab = window.innerWidth > 900 ? 'week' : 'today';
@@ -514,9 +548,36 @@ let saveTimer = null;
 function saveState() {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
+    // Local backup (offline용)
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-    catch (e) { console.warn('save failed', e); }
-  }, 400);
+    catch (e) { console.warn('local save failed', e); }
+    // Cloud sync
+    saveToFirestore();
+  }, 600);
+}
+
+async function saveToFirestore() {
+  if (!currentUser) return;
+  if (suppressSaveOnce) { suppressSaveOnce = false; return; }
+  try {
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      state: state,
+      email: currentUser.email,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (e) {
+    console.warn('Firestore save failed:', e);
+  }
+}
+
+async function doSignIn() {
+  try { await signInWithPopup(auth, provider); }
+  catch (e) { console.error(e); alert('로그인 실패: ' + e.message); }
+}
+async function doSignOut() {
+  if (!confirm('로그아웃 하시겠습니까?')) return;
+  if (unsubscribeUserDoc) { unsubscribeUserDoc(); unsubscribeUserDoc = null; }
+  await signOut(auth);
 }
 function getWeek(monday) {
   const k = weekKey(monday);
@@ -569,9 +630,24 @@ function statusPill(status, onChange) {
 // ════════════════════════════════════════════════════
 // Render
 // ════════════════════════════════════════════════════
+function renderLoadingScreen() {
+  return el('div', { class: 'loading-screen' }, '...');
+}
+function renderLoginScreen() {
+  return el('div', { class: 'login-screen' },
+    el('div', { class: 'login-card' },
+      el('h1', null, '주간 계획'),
+      el('p', null, 'Google 계정으로 로그인하면 모든 기기에서 데이터가 자동 동기화됩니다. 본인만 본인 데이터에 접근 가능.'),
+      el('button', { class: 'google-btn', onclick: doSignIn }, 'Google로 로그인'),
+    ),
+  );
+}
+
 function render() {
   const app = document.getElementById('app');
   app.innerHTML = '';
+  if (!authResolved) { app.appendChild(renderLoadingScreen()); return; }
+  if (!currentUser) { app.appendChild(renderLoginScreen()); return; }
   app.appendChild(renderTopbar());
   if (tab === 'month') {
     app.appendChild(renderMonthView());
@@ -620,6 +696,11 @@ function renderTopbar() {
     el('div', { class: 'actions' },
       el('button', { onclick: exportJSON }, 'Export'),
       el('button', { onclick: importJSON }, 'Import'),
+      currentUser && el('button', {
+        onclick: doSignOut,
+        title: '로그아웃 — ' + (currentUser.email || ''),
+        style: 'color: var(--text-tertiary);'
+      }, '로그아웃'),
     ),
   );
 }
@@ -1104,8 +1185,56 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 // ════════════════════════════════════════════════════
 // Init
 // ════════════════════════════════════════════════════
+function listenToUserData(user) {
+  unsubscribeUserDoc = onSnapshot(doc(db, 'users', user.uid), (snapshot) => {
+    if (snapshot.metadata.hasPendingWrites) return; // self-write skip
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      if (data && data.state) {
+        suppressSaveOnce = true;
+        state = normalizeState(data.state);
+        render();
+        return;
+      }
+    }
+    // 첫 사용: 로컬 데이터 migrate 또는 sample
+    let initial = null;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.weeks && Object.keys(parsed.weeks).length > 0) {
+          if (confirm('이 기기에 저장된 데이터가 있어요. 클라우드로 옮길까요? (취소하면 sample로 시작)')) {
+            initial = parsed.schemaVersion === SCHEMA_VERSION ? normalizeState(parsed)
+                    : parsed.schemaVersion === 2 ? migrateV2to3(parsed)
+                    : parsed.schemaVersion === 1 ? migrateV1(parsed) : null;
+          }
+        }
+      }
+    } catch (e) { console.warn('local migrate failed:', e); }
+    state = initial || sampleState();
+    render();
+    saveToFirestore();
+  }, (err) => {
+    console.error('Firestore listen failed:', err);
+    alert('데이터 sync 실패: ' + err.message + '\n\nFirestore 보안 규칙을 확인해주세요.');
+  });
+}
+
+onAuthStateChanged(auth, (user) => {
+  authResolved = true;
+  if (unsubscribeUserDoc) { unsubscribeUserDoc(); unsubscribeUserDoc = null; }
+  currentUser = user;
+  if (user) {
+    listenToUserData(user);
+  } else {
+    state = { schemaVersion: SCHEMA_VERSION, weeks: {} };
+    render();
+  }
+});
+
 window.addEventListener('resize', () => render());
-render();
+render(); // 첫 로딩 화면
 </script>
 </body>
 </html>
