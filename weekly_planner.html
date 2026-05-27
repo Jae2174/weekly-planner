@@ -76,9 +76,16 @@
   .week-nav button:hover { background: var(--surface-2); color: var(--text); }
   .week-nav .current { font-weight: 500; padding: 6px 10px; color: var(--text); min-width: 120px; text-align: center; font-size: 12px; }
   .today-jump { padding: 6px 10px; font-size: 11px; color: var(--info); background: var(--info-bg); border-radius: var(--radius-sm); }
-  .actions { display: flex; gap: 4px; margin-left: auto; }
+  .actions { display: flex; gap: 4px; margin-left: auto; align-items: center; flex-wrap: wrap; }
   .actions button { padding: 6px 10px; font-size: 11px; color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
   .actions button:hover { background: var(--surface-2); color: var(--text); }
+  .actions .small-btn { padding: 6px 8px; font-size: 11px; }
+  .actions .sync-btn { background: var(--info-bg); color: var(--info); border: 1px solid var(--info); font-weight: 500; padding: 7px 14px; font-size: 12px; }
+  .actions .sync-btn:hover { background: var(--info); color: white; }
+  .save-indicator { font-size: 11px; color: var(--text-tertiary); padding: 0 8px; transition: color 0.2s; min-width: 80px; text-align: right; }
+  .save-indicator.saving { color: var(--text-secondary); }
+  .save-indicator.saved { color: var(--status-done); }
+  .save-indicator.error { color: var(--danger); font-weight: 500; }
 
   /* ─── View tabs ─── */
   .view-tabs { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px; }
@@ -363,6 +370,8 @@ let currentUser = null;
 let authResolved = false;
 let unsubscribeUserDoc = null;
 let suppressSaveOnce = false;
+let lastSavedAt = null;
+let saveStatus = 'idle'; // 'idle' | 'saving' | 'saved' | 'error'
 
 // ════════════════════════════════════════════════════
 // Constants + helpers
@@ -764,27 +773,61 @@ function applyRemoteState(newState) {
 
 function saveState() {
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    // Local backup (offline용)
+  saveTimer = setTimeout(async () => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
     catch (e) { console.warn('local save failed', e); }
-    // Cloud sync
-    saveToFirestore();
+    await saveToFirestore();
   }, 600);
+}
+
+function setSaveStatus(s) { saveStatus = s; updateSaveIndicator(); }
+function updateSaveIndicator() {
+  const elIndicator = document.getElementById('save-indicator');
+  if (!elIndicator) return;
+  elIndicator.className = 'save-indicator ' + saveStatus;
+  if (saveStatus === 'saving') {
+    elIndicator.textContent = '저장 중...';
+  } else if (saveStatus === 'error') {
+    elIndicator.textContent = '저장 실패 ⚠';
+  } else if (lastSavedAt) {
+    const ago = Math.floor((Date.now() - lastSavedAt.getTime()) / 1000);
+    if (ago < 5) elIndicator.textContent = '방금 저장 ✓';
+    else if (ago < 60) elIndicator.textContent = ago + '초 전 저장됨';
+    else if (ago < 3600) elIndicator.textContent = Math.floor(ago/60) + '분 전 저장됨';
+    else elIndicator.textContent = Math.floor(ago/3600) + '시간 전 저장됨';
+  } else {
+    elIndicator.textContent = '';
+  }
 }
 
 async function saveToFirestore() {
   if (!currentUser) return;
+  setSaveStatus('saving');
   try {
     await setDoc(doc(db, 'users', currentUser.uid), {
       state: state,
       email: currentUser.email,
       updatedAt: serverTimestamp(),
     }, { merge: true });
+    lastSavedAt = new Date();
+    setSaveStatus('saved');
+    return true;
   } catch (e) {
     console.warn('Firestore save failed:', e);
+    setSaveStatus('error');
+    return false;
   }
 }
+
+async function manualSync() {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  const ok = await saveToFirestore();
+  if (!ok) alert('저장 실패 — 인터넷 연결 또는 로그인 상태를 확인해주세요.');
+}
+
+// 매 30초 indicator 시각 갱신
+setInterval(updateSaveIndicator, 30000);
 
 async function doSignIn() {
   try { await signInWithPopup(auth, provider); }
@@ -886,7 +929,7 @@ function render() {
     app.appendChild(renderMatrix('북마크', w.matrix.bookmark));
   }
   app.appendChild(el('div', { style: 'text-align:center;padding:20px 0;font-size:11px;color:var(--text-tertiary);' },
-    '데이터는 이 브라우저에만 저장. 다른 기기 쓰려면 Export → Import.'));
+    '클라우드 자동 저장 (Google 계정). 위 ↻ 동기화 버튼으로 즉시 저장 강제. ⤓/⤒ 는 JSON 파일 백업/복원.'));
   scheduleWeekNotifications();
 }
 
@@ -911,11 +954,17 @@ function renderTopbar() {
       el('button', { class: tab === 'today' ? 'active' : '', onclick: () => { tab = 'today'; render(); } }, '오늘'),
     ),
     el('div', { class: 'actions' },
-      el('button', { onclick: exportJSON }, 'Export'),
-      el('button', { onclick: importJSON }, 'Import'),
+      el('div', { id: 'save-indicator', class: 'save-indicator ' + saveStatus },
+        saveStatus === 'saving' ? '저장 중...' :
+        saveStatus === 'error' ? '저장 실패 ⚠' :
+        lastSavedAt ? '방금 저장 ✓' : ''),
+      el('button', { class: 'sync-btn', onclick: manualSync, title: '클라우드에 즉시 저장' }, '↻ 동기화'),
+      el('button', { onclick: exportJSON, class: 'small-btn', title: 'JSON 파일로 백업 다운로드' }, '⤓'),
+      el('button', { onclick: importJSON, class: 'small-btn', title: 'JSON 백업 파일에서 복원' }, '⤒'),
       currentUser && el('button', {
         onclick: doSignOut,
         title: '로그아웃 — ' + (currentUser.email || ''),
+        class: 'small-btn',
         style: 'color: var(--text-tertiary);'
       }, '로그아웃'),
     ),
