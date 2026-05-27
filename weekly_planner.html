@@ -750,7 +750,6 @@ function applyRemoteState(newState) {
     const applyWhenDone = () => {
       active.removeEventListener('blur', applyWhenDone);
       if (pendingRemoteState) {
-        suppressSaveOnce = true;
         state = normalizeState(pendingRemoteState);
         pendingRemoteState = null;
         render();
@@ -759,7 +758,6 @@ function applyRemoteState(newState) {
     active.addEventListener('blur', applyWhenDone);
     return;
   }
-  suppressSaveOnce = true;
   state = normalizeState(newState);
   render();
 }
@@ -777,7 +775,6 @@ function saveState() {
 
 async function saveToFirestore() {
   if (!currentUser) return;
-  if (suppressSaveOnce) { suppressSaveOnce = false; return; }
   try {
     await setDoc(doc(db, 'users', currentUser.uid), {
       state: state,
