@@ -806,7 +806,7 @@ async function saveToFirestore() {
   setSaveStatus('saving');
   try {
     await setDoc(doc(db, 'users', currentUser.uid), {
-      state: state,
+      stateJson: JSON.stringify(state), // Firestore가 nested array 지원 안 해서 문자열로
       email: currentUser.email,
       updatedAt: serverTimestamp(),
     }, { merge: true });
@@ -1571,8 +1571,15 @@ function listenToUserData(user) {
     if (snapshot.metadata.hasPendingWrites) return; // self-write skip
     if (snapshot.exists()) {
       const data = snapshot.data();
-      if (data && data.state) {
-        applyRemoteState(data.state);
+      // 새 형식 (stateJson 문자열) 우선, 옛 형식 (state 객체) 호환
+      let remote = null;
+      if (data && data.stateJson) {
+        try { remote = JSON.parse(data.stateJson); } catch (e) { console.warn('JSON parse fail', e); }
+      } else if (data && data.state) {
+        remote = data.state;
+      }
+      if (remote) {
+        applyRemoteState(remote);
         return;
       }
     }

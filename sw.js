@@ -1,5 +1,5 @@
 // 주간 계획 service worker — offline 캐시
-const CACHE = 'weekly-planner-v5-errdetail';
+const CACHE = 'weekly-planner-v6-jsonstr';
 const ASSETS = ['./', './weekly_planner.html', './manifest.json'];
 
 self.addEventListener('install', e => {
