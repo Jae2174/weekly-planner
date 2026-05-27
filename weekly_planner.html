@@ -800,8 +800,9 @@ function updateSaveIndicator() {
   }
 }
 
+let lastSaveError = null;
 async function saveToFirestore() {
-  if (!currentUser) return;
+  if (!currentUser) { lastSaveError = '로그인 안 됨'; return false; }
   setSaveStatus('saving');
   try {
     await setDoc(doc(db, 'users', currentUser.uid), {
@@ -810,10 +811,12 @@ async function saveToFirestore() {
       updatedAt: serverTimestamp(),
     }, { merge: true });
     lastSavedAt = new Date();
+    lastSaveError = null;
     setSaveStatus('saved');
     return true;
   } catch (e) {
-    console.warn('Firestore save failed:', e);
+    console.error('Firestore save failed:', e);
+    lastSaveError = (e.code ? '[' + e.code + '] ' : '') + (e.message || String(e));
     setSaveStatus('error');
     return false;
   }
@@ -823,7 +826,15 @@ async function manualSync() {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
   const ok = await saveToFirestore();
-  if (!ok) alert('저장 실패 — 인터넷 연결 또는 로그인 상태를 확인해주세요.');
+  if (!ok) {
+    alert('저장 실패\n\n' + (lastSaveError || '알 수 없는 오류') +
+          '\n\n진단:\n' +
+          '· permission-denied → Firestore 보안 규칙 확인\n' +
+          '· unavailable / network-request-failed → 진짜 인터넷/Firestore 다운\n' +
+          '· requests-from-referer-blocked → API Key Restrictions (Google Cloud)에 firebaseapp.com 도메인 추가\n' +
+          '· unauthenticated → 다시 로그인 필요\n\n' +
+          '브라우저 콘솔 (F12 → Console 탭)에 자세한 에러 있음.');
+  }
 }
 
 // 매 30초 indicator 시각 갱신
