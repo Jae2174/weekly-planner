@@ -191,6 +191,8 @@
   .today-header h2 { font-size: 18px; margin: 0; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .today-header .today-badge-lg { background: var(--info); color: white; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 500; }
   .today-header .summary { display: flex; gap: 12px; font-size: 11px; color: var(--text-secondary); }
+  .ai-fill-btn { padding: 7px 12px; font-size: 12px; font-weight: 500; background: linear-gradient(135deg, #7F77DD, #ED93B1); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; }
+  .ai-fill-btn:hover { opacity: 0.9; }
   .today-header .summary span strong { color: var(--text); }
 
   /* WORK 3 슬롯 (가로 또는 세로) */
@@ -415,7 +417,7 @@
 // ════════════════════════════════════════════════════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, onSnapshot, serverTimestamp, collection, addDoc, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA0SxQUphE_YwYGRvRN4p7ilzWcCYRYdWQ",
@@ -537,8 +539,11 @@ function loadState() {
   return sampleState();
 }
 
+const ADMIN_UID = 'WGAuISNlPhOGPSHVxMdtl05vro33'; // jaech@lowlit.co — 피드백 모두 볼 권한
+
 function normalizeState(s) {
   if (!s.weeks) s.weeks = {};
+  if (!s.settings || typeof s.settings !== 'object') s.settings = {};
   for (const k in s.weeks) {
     const w = s.weeks[k];
     if (!w.matrix) w.matrix = { idea: emptyIdeaCells(), bookmark: emptyMatrixCells() };
@@ -1080,6 +1085,9 @@ function renderTopbar() {
         saveStatus === 'error' ? '저장 실패 ⚠' :
         lastSavedAt ? '방금 저장 ✓' : ''),
       el('button', { class: 'sync-btn', onclick: manualSync, title: '클라우드에 즉시 저장' }, '↻ 동기화'),
+      el('button', { onclick: openFeedbackModal, class: 'small-btn', title: '피드백 / 개선 제안' }, '💬'),
+      currentUser && currentUser.uid === ADMIN_UID ? el('button', { onclick: openFeedbackListModal, class: 'small-btn', title: '받은 피드백 보기 (admin)' }, '📥') : null,
+      el('button', { onclick: openSettingsModal, class: 'small-btn', title: '설정 (AI key 등)' }, '⚙'),
       el('button', { onclick: exportJSON, class: 'small-btn', title: 'JSON 파일로 백업 다운로드' }, '⤓'),
       el('button', { onclick: importJSON, class: 'small-btn', title: 'JSON 백업 파일에서 복원' }, '⤒'),
       currentUser && el('button', {
@@ -1299,10 +1307,13 @@ function renderTodayView() {
       DAYS_KOR[currentDayIdx] + ' ' + (date.getMonth()+1) + '/' + date.getDate(),
       isToday ? el('span', { class: 'today-badge-lg' }, '오늘') : null,
     ),
-    el('div', { class: 'summary' },
-      el('span', null, 'WORK ', el('strong', null, workDone + '/' + workTotal)),
-      el('span', null, 'LIFE ', el('strong', null, lifeDone + '/' + lifeTotal)),
-      el('span', null, '연락 ', el('strong', null, contactDone + '/' + day.contacts.length)),
+    el('div', { style: 'display:flex;gap:10px;align-items:center;' },
+      el('div', { class: 'summary' },
+        el('span', null, 'WORK ', el('strong', null, workDone + '/' + workTotal)),
+        el('span', null, 'LIFE ', el('strong', null, lifeDone + '/' + lifeTotal)),
+        el('span', null, '연락 ', el('strong', null, contactDone + '/' + day.contacts.length)),
+      ),
+      el('button', { class: 'ai-fill-btn', onclick: openAIFillModal, title: '줄글 → AI 정리' }, '✨ AI로 정리'),
     ),
   ));
 
@@ -1437,6 +1448,321 @@ function renderWorkSlot(day, j, week) {
   wbsArea.appendChild(tasksRow);
   slot.appendChild(wbsArea);
   return slot;
+}
+
+// ════════════════════════════════════════════════════
+// 설정 모달 (Claude API key)
+// ════════════════════════════════════════════════════
+function openSettingsModal() {
+  closeItemModal();
+  const overlay = el('div', { class: 'modal-overlay', id: 'item-modal-overlay', onclick: (e) => { if (e.target.id === 'item-modal-overlay') closeItemModal(); } });
+  const keyInput = el('input', { type: 'password', placeholder: 'sk-ant-...', value: state.settings.anthropicKey || '', style: 'font-size:13px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;font-family:monospace;' });
+  const modal = el('div', { class: 'modal-card', onclick: e => e.stopPropagation() },
+    el('h3', { style: 'margin:0 0 14px;font-size:16px;' }, '설정'),
+    el('div', { style: 'font-size:12px;color:var(--text-secondary);margin-bottom:10px;line-height:1.5;' },
+      'AI 자동 채움 기능을 사용하려면 Claude API key가 필요해요. ',
+      el('a', { href: 'https://console.anthropic.com/settings/keys', target: '_blank', style: 'color:var(--info);' }, 'console.anthropic.com'),
+      '에서 발급 가능 ($5 무료 크레딧). 본인 user doc에만 저장되며 외부 노출 안 됨.'),
+    el('label', { style: 'font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px;font-weight:500;' }, 'Claude API Key'),
+    keyInput,
+    el('div', { style: 'display:flex;gap:8px;margin-top:16px;justify-content:flex-end;' },
+      el('button', { class: 'modal-btn', onclick: closeItemModal }, '취소'),
+      el('button', { class: 'modal-btn modal-btn-primary', onclick: () => {
+        state.settings.anthropicKey = keyInput.value.trim();
+        saveState();
+        closeItemModal();
+        alert('저장됨. 오늘 탭에서 "AI로 정리" 버튼 사용 가능.');
+      } }, '저장'),
+    ),
+  );
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+// ════════════════════════════════════════════════════
+// AI 자동 채움
+// ════════════════════════════════════════════════════
+function buildAIPrompt(text) {
+  return `다음은 사용자가 오늘 해야 할 일들을 자유롭게 쓴 줄글입니다:
+
+"""
+${text}
+"""
+
+이걸 다음 JSON 형식으로 정리해주세요. 빈 항목은 빈 문자열/배열로 두세요.
+
+{
+  "workActions": [
+    { "text": "오늘 끝낼 핵심 업무 1", "cat": "카테고리 추측 (예: 경영/행정, TIPS, 영업, 제품개발, 위임 등)" }
+  ],
+  "lifeActions": {
+    "자기계발": "(있으면 한 줄)",
+    "건강": "(있으면 한 줄)",
+    "소셜": "(있으면 한 줄)"
+  },
+  "contacts": [
+    { "name": "연락할 사람", "purpose": "용건 한 줄" }
+  ],
+  "requestsToOthers": ["내가 누군가에게 시킬 일", ...],
+  "requestsFromOthers": ["누가 나에게 시킨 일", ...],
+  "review": "(만약 회고/반성 내용이 있으면, 없으면 빈 문자열)"
+}
+
+규칙:
+- workActions은 최대 3개. 가장 중요한 업무 위주로.
+- 카테고리는 줄글 내용에서 합리적으로 추측. 모호하면 빈 문자열.
+- 연락은 사람한테 직접 닿는 것 (이메일/전화/만남). 일은 workActions에.
+- 응답은 JSON 객체만. 설명/markdown 코드블록 없이.`;
+}
+
+async function callClaudeAPI(prompt) {
+  const key = state.settings.anthropicKey;
+  if (!key) throw new Error('API key 없음 — 설정에서 입력 필요');
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error('Claude API 오류 ' + resp.status + ': ' + errText.slice(0, 300));
+  }
+  const data = await resp.json();
+  let content = data.content[0].text.trim();
+  // markdown 코드블록 안 JSON 있는 경우 대응
+  const m = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (m) content = m[1].trim();
+  return JSON.parse(content);
+}
+
+function openAIFillModal() {
+  if (!state.settings.anthropicKey) {
+    if (confirm('Claude API key가 필요해요. 설정 화면 열까요?')) openSettingsModal();
+    return;
+  }
+  closeItemModal();
+  const overlay = el('div', { class: 'modal-overlay', id: 'item-modal-overlay', onclick: (e) => { if (e.target.id === 'item-modal-overlay') closeItemModal(); } });
+  const inputTA = el('textarea', { placeholder: '오늘 할 일을 자유롭게 쓰세요. AI가 분석해서 WORK/LIFE/연락/요청/회고 칸으로 정리합니다.\n\n예) 오늘은 세금 정산 마무리하고, 다움 CS봇 PoC 진행. 왈자 답변 회신, 커버링 수거 확인. AI 강의 1시간 듣자. 약 챙겨먹기.', rows: 10, style: 'font-size:13px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;min-height:180px;resize:vertical;line-height:1.5;' });
+  const statusDiv = el('div', { style: 'font-size:12px;color:var(--text-tertiary);margin-top:8px;min-height:16px;' });
+  const runBtn = el('button', { class: 'modal-btn modal-btn-primary' }, '✨ AI로 정리');
+  runBtn.onclick = async () => {
+    const text = inputTA.value.trim();
+    if (!text) { alert('내용을 입력해주세요.'); return; }
+    runBtn.disabled = true;
+    runBtn.textContent = '분석 중...';
+    statusDiv.textContent = 'Claude에 요청 중 (보통 5-10초)';
+    try {
+      const result = await callClaudeAPI(buildAIPrompt(text));
+      closeItemModal();
+      openAIReviewModal(result);
+    } catch (e) {
+      console.error(e);
+      statusDiv.textContent = '실패: ' + e.message;
+      statusDiv.style.color = 'var(--danger)';
+      runBtn.disabled = false;
+      runBtn.textContent = '✨ AI로 정리';
+    }
+  };
+  const modal = el('div', { class: 'modal-card', style: 'max-width:600px;', onclick: e => e.stopPropagation() },
+    el('h3', { style: 'margin:0 0 8px;font-size:16px;' }, '✨ 오늘 업무 줄글로 작성'),
+    el('div', { style: 'font-size:12px;color:var(--text-secondary);margin-bottom:12px;' }, '자유롭게 쓰면 AI가 정리해서 보여줍니다. 확인 후 적용하면 오늘 탭이 채워져요.'),
+    inputTA,
+    statusDiv,
+    el('div', { style: 'display:flex;gap:8px;margin-top:16px;justify-content:flex-end;' },
+      el('button', { class: 'modal-btn', onclick: closeItemModal }, '취소'),
+      runBtn,
+    ),
+  );
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  setTimeout(() => inputTA.focus(), 50);
+}
+
+function openAIReviewModal(result) {
+  closeItemModal();
+  const overlay = el('div', { class: 'modal-overlay', id: 'item-modal-overlay', onclick: (e) => { if (e.target.id === 'item-modal-overlay') closeItemModal(); } });
+  const previewLines = [];
+  if (result.workActions && result.workActions.length) {
+    previewLines.push('📌 WORK:');
+    result.workActions.forEach((a, i) => previewLines.push(`  ${i+1}. ${a.text || ''}${a.cat ? ' [' + a.cat + ']' : ''}`));
+  }
+  if (result.lifeActions) {
+    const lifeFilled = ['자기계발','건강','소셜'].filter(k => result.lifeActions[k] && result.lifeActions[k].trim());
+    if (lifeFilled.length) {
+      previewLines.push('🌱 LIFE:');
+      lifeFilled.forEach(k => previewLines.push(`  · ${k}: ${result.lifeActions[k]}`));
+    }
+  }
+  if (result.contacts && result.contacts.length) {
+    previewLines.push('📞 연락:');
+    result.contacts.forEach(c => previewLines.push(`  · ${c.name || ''}${c.purpose ? ' — ' + c.purpose : ''}`));
+  }
+  if (result.requestsToOthers && result.requestsToOthers.length) {
+    previewLines.push('➡️ 요청할 일:');
+    result.requestsToOthers.forEach(r => previewLines.push('  · ' + r));
+  }
+  if (result.requestsFromOthers && result.requestsFromOthers.length) {
+    previewLines.push('⬅️ 요청받은 일:');
+    result.requestsFromOthers.forEach(r => previewLines.push('  · ' + r));
+  }
+  if (result.review && result.review.trim()) {
+    previewLines.push('💭 회고:');
+    previewLines.push('  ' + result.review);
+  }
+  const previewText = previewLines.join('\n');
+  const modal = el('div', { class: 'modal-card', style: 'max-width:600px;', onclick: e => e.stopPropagation() },
+    el('h3', { style: 'margin:0 0 8px;font-size:16px;' }, 'AI 정리 결과'),
+    el('div', { style: 'font-size:12px;color:var(--text-secondary);margin-bottom:12px;' }, '오늘 탭의 빈 칸에 추가됩니다. 기존 입력은 덮어쓰지 않아요.'),
+    el('pre', { style: 'background:var(--surface-2);padding:12px;border-radius:var(--radius-sm);font-size:12px;line-height:1.6;white-space:pre-wrap;max-height:400px;overflow:auto;font-family:inherit;' }, previewText || '(빈 결과)'),
+    el('div', { style: 'display:flex;gap:8px;margin-top:16px;justify-content:flex-end;' },
+      el('button', { class: 'modal-btn', onclick: closeItemModal }, '취소'),
+      el('button', { class: 'modal-btn modal-btn-primary', onclick: () => { applyAIResult(result); closeItemModal(); render(); } }, '적용'),
+    ),
+  );
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+function applyAIResult(r) {
+  const w = getWeek(currentMonday);
+  const day = w.days[currentDayIdx];
+  // workActions: 빈 슬롯부터 채움
+  if (Array.isArray(r.workActions)) {
+    let slot = 0;
+    for (const a of r.workActions) {
+      while (slot < 3 && day.workActions[slot].text.trim()) slot++;
+      if (slot >= 3) break;
+      day.workActions[slot] = { ...emptyAction(), text: a.text || '', cat: a.cat || '' };
+      slot++;
+    }
+  }
+  // lifeActions
+  if (r.lifeActions) {
+    const map = { '자기계발': 0, '건강': 1, '소셜': 2 };
+    for (const k in map) {
+      if (r.lifeActions[k] && r.lifeActions[k].trim() && !day.lifeActions[map[k]].text.trim()) {
+        day.lifeActions[map[k]] = { text: r.lifeActions[k], status: 'pending' };
+      }
+    }
+  }
+  // contacts
+  if (Array.isArray(r.contacts)) {
+    for (const c of r.contacts) {
+      if ((c.name || c.purpose) && !day.contacts.some(x => (x.name || x.text) === c.name)) {
+        day.contacts.push({ checked: false, name: c.name || '', purpose: c.purpose || '', datetime: '', place: '', memo: '', notify: false });
+      }
+    }
+  }
+  // requestsToOthers, requestsFromOthers
+  if (Array.isArray(r.requestsToOthers)) {
+    for (const t of r.requestsToOthers) if (t && t.trim() && !day.requestsToOthers.some(x => x.text === t)) day.requestsToOthers.push({ checked: false, text: t });
+  }
+  if (Array.isArray(r.requestsFromOthers)) {
+    for (const t of r.requestsFromOthers) if (t && t.trim() && !day.requestsFromOthers.some(x => x.text === t)) day.requestsFromOthers.push({ checked: false, text: t });
+  }
+  // review (있으면 append)
+  if (r.review && r.review.trim()) {
+    day.review = day.review.trim() ? day.review + '\n' + r.review : r.review;
+  }
+  saveState();
+}
+
+// ════════════════════════════════════════════════════
+// 피드백 수집
+// ════════════════════════════════════════════════════
+function openFeedbackModal() {
+  closeItemModal();
+  const overlay = el('div', { class: 'modal-overlay', id: 'item-modal-overlay', onclick: (e) => { if (e.target.id === 'item-modal-overlay') closeItemModal(); } });
+  const catSel = el('select', { style: 'font-size:13px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;' });
+  for (const cat of ['제안', '버그', '감사', '기타']) catSel.appendChild(el('option', { value: cat }, cat));
+  const textTA = el('textarea', { placeholder: '어떤 기능이 있으면 좋겠는지, 불편한 점, 칭찬 등 자유롭게.', rows: 6, style: 'font-size:13px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;min-height:120px;resize:vertical;' });
+  const submitBtn = el('button', { class: 'modal-btn modal-btn-primary' }, '보내기');
+  submitBtn.onclick = async () => {
+    const text = textTA.value.trim();
+    if (!text) { alert('내용을 입력해주세요.'); return; }
+    submitBtn.disabled = true;
+    submitBtn.textContent = '전송 중...';
+    try {
+      await addDoc(collection(db, 'feedbacks'), {
+        fromUid: currentUser.uid,
+        fromEmail: currentUser.email,
+        category: catSel.value,
+        text: text,
+        createdAt: serverTimestamp(),
+      });
+      alert('피드백 보냈어요. 감사합니다 🙏');
+      closeItemModal();
+    } catch (e) {
+      console.error(e);
+      alert('전송 실패: ' + (e.code || '') + ' ' + e.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = '보내기';
+    }
+  };
+  const modal = el('div', { class: 'modal-card', onclick: e => e.stopPropagation() },
+    el('h3', { style: 'margin:0 0 8px;font-size:16px;' }, '💬 피드백'),
+    el('div', { style: 'font-size:12px;color:var(--text-secondary);margin-bottom:12px;' }, '개선 아이디어, 버그, 칭찬 다 환영.'),
+    el('label', { style: 'font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px;font-weight:500;' }, '종류'),
+    catSel,
+    el('label', { style: 'font-size:11px;color:var(--text-tertiary);display:block;margin:10px 0 4px;font-weight:500;' }, '내용'),
+    textTA,
+    el('div', { style: 'display:flex;gap:8px;margin-top:16px;justify-content:flex-end;' },
+      el('button', { class: 'modal-btn', onclick: closeItemModal }, '취소'),
+      submitBtn,
+    ),
+  );
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  setTimeout(() => textTA.focus(), 50);
+}
+
+async function openFeedbackListModal() {
+  // admin만 호출 가능 — 모든 피드백 list 보기
+  closeItemModal();
+  const overlay = el('div', { class: 'modal-overlay', id: 'item-modal-overlay', onclick: (e) => { if (e.target.id === 'item-modal-overlay') closeItemModal(); } });
+  const content = el('div', { style: 'font-size:13px;color:var(--text-secondary);' }, '로딩 중...');
+  const modal = el('div', { class: 'modal-card', style: 'max-width:700px;', onclick: e => e.stopPropagation() },
+    el('h3', { style: 'margin:0 0 14px;font-size:16px;' }, '📥 받은 피드백 (admin)'),
+    content,
+    el('div', { style: 'display:flex;gap:8px;margin-top:16px;justify-content:flex-end;' },
+      el('button', { class: 'modal-btn', onclick: closeItemModal }, '닫기'),
+    ),
+  );
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  try {
+    const q = query(collection(db, 'feedbacks'), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    content.innerHTML = '';
+    if (snap.empty) {
+      content.appendChild(el('div', { style: 'color:var(--text-tertiary);font-style:italic;' }, '아직 피드백 없음.'));
+    } else {
+      snap.forEach(d => {
+        const f = d.data();
+        const dt = f.createdAt && f.createdAt.toDate ? f.createdAt.toDate().toLocaleString('ko-KR') : '';
+        content.appendChild(el('div', { style: 'border-bottom:1px solid var(--border);padding:10px 0;' },
+          el('div', { style: 'display:flex;gap:8px;font-size:11px;color:var(--text-tertiary);margin-bottom:4px;' },
+            el('span', { style: 'padding:1px 6px;background:var(--surface-2);border-radius:8px;font-weight:500;' }, f.category || '기타'),
+            el('span', null, f.fromEmail || ''),
+            el('span', null, dt),
+          ),
+          el('div', { style: 'font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.5;' }, f.text || ''),
+        ));
+      });
+    }
+  } catch (e) {
+    content.innerHTML = '';
+    content.appendChild(el('div', { style: 'color:var(--danger);' }, '로드 실패: ' + e.message + '\n\nFirestore Rules에 /feedbacks 권한 추가했는지 확인.'));
+  }
 }
 
 // ─── 공통 모달 (아이디어/북마크 입력) ───
