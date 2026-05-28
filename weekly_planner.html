@@ -204,6 +204,9 @@
   .slot-action { background: rgba(255,255,255,0.5); border-radius: var(--radius-sm); padding: 8px; margin-bottom: 8px; }
   .slot-action textarea { font-size: 14px; min-height: 32px; color: var(--work-text); font-weight: 500; line-height: 1.4; }
   .slot-action.done textarea { text-decoration: line-through; }
+  .wbs-toggle { background: rgba(255,255,255,0.3); border-radius: var(--radius-sm); padding: 5px 8px; font-size: 11px; color: var(--work-accent); font-weight: 500; cursor: pointer; user-select: none; text-align: left; margin-bottom: 4px; }
+  .wbs-toggle:hover { background: rgba(255,255,255,0.5); }
+  .wbs-area.collapsed { display: none; }
   .wbs-area { flex: 1; display: flex; flex-direction: column; gap: 5px; }
   .wbs-area .wbs-row { background: rgba(255,255,255,0.35); border-radius: var(--radius-sm); padding: 6px 8px; }
   .wbs-area .wbs-row .wbs-label { font-size: 9px; color: var(--work-accent); opacity: 0.6; font-weight: 600; letter-spacing: 0.08em; margin-bottom: 2px; }
@@ -264,6 +267,21 @@
   .contact-modal-field textarea { resize: none; min-height: 72px; line-height: 1.5; }
   .contact-modal-field input[type=datetime-local] { font-size: 13px; }
 
+  /* 요청 section (요청할 일 / 요청받은 일) */
+  .request-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); }
+  .request-section h3 { font-size: 12px; margin: 0 0 8px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.05em; text-transform: uppercase; }
+  .request-section h3 .count { font-size: 10px; color: var(--text-tertiary); font-weight: 400; }
+  .request-section.requestsToOthers h3 { color: var(--rock-work-accent); }
+  .request-section.requestsFromOthers h3 { color: var(--rock-life-accent); }
+  .request-list { display: flex; flex-direction: column; gap: 4px; }
+  .request-item { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; background: var(--contact-bg); border-radius: var(--radius-sm); }
+  .request-item .check-btn { font-size: 14px; cursor: pointer; user-select: none; padding-top: 1px; flex-shrink: 0; color: var(--text-secondary); }
+  .request-item.done .check-btn { color: var(--work-accent); }
+  .request-item.done textarea { text-decoration: line-through; opacity: 0.55; }
+  .request-item textarea { font-size: 13px; min-height: 22px; line-height: 1.4; }
+  .request-item .del-btn { font-size: 12px; color: var(--text-tertiary); padding: 2px 4px; opacity: 0; flex-shrink: 0; }
+  .request-item:hover .del-btn, .request-item:focus-within .del-btn { opacity: 1; }
+
   /* 회고 section */
   .review-section { background: var(--review-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); }
   .review-section h3 { font-size: 12px; margin: 0 0 8px; font-weight: 600; color: var(--review-text); letter-spacing: 0.05em; text-transform: uppercase; }
@@ -298,6 +316,52 @@
     .month-rock { font-size: 8px; }
     .month-review-badge { font-size: 9px; top: 3px; right: 4px; }
   }
+
+  /* ─── 아이디어 / 북마크 모달 + items ─── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+  .modal-card { background: var(--surface); border-radius: var(--radius); padding: 20px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+  .modal-btn { padding: 8px 16px; font-size: 13px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); cursor: pointer; }
+  .modal-btn:hover { background: var(--surface-2); }
+  .modal-btn-primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .modal-btn-primary:hover { opacity: 0.88; background: var(--text); color: var(--bg); }
+  .modal-btn-danger { color: var(--danger); border-color: var(--danger); }
+  .modal-btn-danger:hover { background: var(--danger); color: white; }
+
+  /* 아이디어 matrix */
+  .idea-matrix { display: grid; grid-template-columns: 70px repeat(4, 1fr); gap: 4px; }
+  .idea-matrix .corner { }
+  .idea-matrix .col-head, .idea-matrix .row-head { font-size: 10px; color: var(--text-tertiary); padding: 4px; text-align: center; font-weight: 600; letter-spacing: 0.05em; background: var(--surface-2); border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+  .idea-matrix .col-head.high { background: #FAEEDA; color: #633806; }
+  .idea-matrix .row-head.urgent { background: #FCEBEB; color: #791F1F; }
+  @media (prefers-color-scheme: dark) {
+    .idea-matrix .col-head.high { background: #412402; color: #FAC775; }
+    .idea-matrix .row-head.urgent { background: #501313; color: #F7C1C1; }
+  }
+  .idea-cell { background: var(--surface-2); border-radius: 4px; padding: 4px; min-height: 56px; display: flex; flex-direction: column; gap: 3px; }
+  .idea-item { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; cursor: pointer; font-size: 11px; line-height: 1.3; display: flex; align-items: center; gap: 4px; transition: background 0.15s; }
+  .idea-item:hover { background: var(--surface-3); border-color: var(--border-strong); }
+  .idea-item .idea-title { flex: 1; }
+  .idea-item .idea-link { font-size: 10px; opacity: 0.6; }
+  .cell-add-btn { background: transparent; border: 1px dashed var(--border-strong); border-radius: 4px; padding: 3px; font-size: 12px; color: var(--text-tertiary); cursor: pointer; text-align: center; }
+  .cell-add-btn:hover { border-color: var(--text-secondary); color: var(--text-secondary); background: var(--surface); }
+
+  /* 북마크 cols */
+  .bookmark-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+  .bookmark-col { background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .bookmark-col-head { display: flex; align-items: center; gap: 6px; padding: 4px 6px; }
+  .bookmark-cat-name { font-size: 12px; font-weight: 600; color: var(--text); flex: 1; }
+  .bookmark-cat-count { font-size: 10px; color: var(--text-tertiary); }
+  .bookmark-cat-del { font-size: 12px; color: var(--text-tertiary); padding: 0 4px; cursor: pointer; background: none; border: none; opacity: 0; }
+  .bookmark-col:hover .bookmark-cat-del { opacity: 1; }
+  .bookmark-cat-del:hover { color: var(--danger); }
+  .bookmark-item { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; cursor: pointer; font-size: 12px; transition: background 0.15s; }
+  .bookmark-item:hover { background: var(--surface-3); border-color: var(--border-strong); }
+  .bookmark-item .bookmark-title { font-weight: 500; color: var(--text); }
+  .bookmark-item .bookmark-link { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
+  .bookmark-add-btn { font-size: 11px; color: var(--text-tertiary); padding: 6px 8px; background: transparent; border: 1px dashed var(--border-strong); border-radius: 4px; cursor: pointer; text-align: left; }
+  .bookmark-add-btn:hover { color: var(--text); border-color: var(--text-secondary); }
+  .bookmark-add-cat { font-size: 10px; color: var(--text-tertiary); padding: 4px 8px; background: var(--surface-2); border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); cursor: pointer; margin-left: auto; }
+  .bookmark-add-cat:hover { color: var(--text); border-color: var(--text-secondary); background: var(--surface-3); }
 
   /* ─── Matrix ─── */
   .matrix-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
@@ -427,6 +491,8 @@ function emptyDay() {
     workActions: [emptyAction(), emptyAction(), emptyAction()],
     lifeActions: [emptyLifeAction(), emptyLifeAction(), emptyLifeAction()],
     contacts: [],
+    requestsToOthers: [],   // 내가 누구한테 요청한 일
+    requestsFromOthers: [], // 누가 나한테 요청한 일
     review: '',
   };
 }
@@ -435,13 +501,22 @@ function emptyMatrixCells() {
   for (const imp of IMPORTANCE) for (const urg of URGENCY) cells[imp+'|'+urg] = '';
   return cells;
 }
+function emptyIdeaCells() {
+  const cells = {};
+  for (const imp of IMPORTANCE) for (const urg of URGENCY) cells[imp+'|'+urg] = [];
+  return cells;
+}
+function emptyBookmark() {
+  return { categories: ['개인', '팀공유', '전사공유'], items: [] };
+}
 function emptyWeek() {
   return {
     rocks: { work: [{text:'',done:false},{text:'',done:false},{text:'',done:false}], life: [{text:'',done:false},{text:'',done:false}] },
     defaultSlots: ['','',''],
     calendar: ['','','','','','',''],
     calendarEvents: [[],[],[],[],[],[],[]],
-    matrix: { idea: emptyMatrixCells(), bookmark: emptyMatrixCells() },
+    matrix: { idea: emptyIdeaCells(), bookmark: emptyMatrixCells() },
+    bookmark: emptyBookmark(),
     days: [emptyDay(), emptyDay(), emptyDay(), emptyDay(), emptyDay(), emptyDay(), emptyDay()],
   };
 }
@@ -466,9 +541,38 @@ function normalizeState(s) {
   if (!s.weeks) s.weeks = {};
   for (const k in s.weeks) {
     const w = s.weeks[k];
-    if (!w.matrix) w.matrix = { idea: emptyMatrixCells(), bookmark: emptyMatrixCells() };
-    if (!w.matrix.idea) w.matrix.idea = emptyMatrixCells();
+    if (!w.matrix) w.matrix = { idea: emptyIdeaCells(), bookmark: emptyMatrixCells() };
+    if (!w.matrix.idea) w.matrix.idea = emptyIdeaCells();
     if (!w.matrix.bookmark) w.matrix.bookmark = emptyMatrixCells();
+    // 아이디어 cells가 string인 경우 (옛 형태) → array로 마이그레이션
+    for (const key in w.matrix.idea) {
+      if (typeof w.matrix.idea[key] === 'string') {
+        const text = w.matrix.idea[key].trim();
+        w.matrix.idea[key] = text ? text.split('\n').filter(s => s.trim()).map(s => ({
+          id: 'i' + Date.now() + Math.random().toString(36).slice(2,7),
+          title: s.trim(), link: '', detail: ''
+        })) : [];
+      } else if (!Array.isArray(w.matrix.idea[key])) {
+        w.matrix.idea[key] = [];
+      }
+    }
+    // 북마크: 옛 매트릭스 형태 → 새 카테고리 형태로 흡수 (옛 데이터가 있으면 "개인"에 다 합침)
+    if (!w.bookmark || !Array.isArray(w.bookmark.categories)) {
+      const oldBookmarkTexts = [];
+      if (w.matrix.bookmark) {
+        for (const key in w.matrix.bookmark) {
+          const v = w.matrix.bookmark[key];
+          if (typeof v === 'string' && v.trim()) {
+            v.split('\n').filter(s => s.trim()).forEach(s => oldBookmarkTexts.push(s.trim()));
+          }
+        }
+      }
+      w.bookmark = emptyBookmark();
+      oldBookmarkTexts.forEach(t => w.bookmark.items.push({
+        id: 'b' + Date.now() + Math.random().toString(36).slice(2,7),
+        category: '개인', title: t, link: '', detail: ''
+      }));
+    }
     if (!w.defaultSlots) w.defaultSlots = ['','',''];
     if (!w.calendarEvents) {
       // 기존 calendar 문자열 데이터를 이벤트 배열로 마이그레이션
@@ -485,6 +589,9 @@ function normalizeState(s) {
         if (typeof a.tasks === 'string') a.tasks = strToTasks(a.tasks);
         if (!Array.isArray(a.tasks)) a.tasks = [];
       }
+      // 요청 리스트 backward 호환
+      if (!Array.isArray(d.requestsToOthers)) d.requestsToOthers = [];
+      if (!Array.isArray(d.requestsFromOthers)) d.requestsFromOthers = [];
       // 연락 항목 구조 마이그레이션 (text → name)
       if (!d.contacts) d.contacts = [];
       d.contacts = d.contacts.map(c => ({
@@ -922,23 +1029,26 @@ function render() {
   if (tab === 'month') {
     app.appendChild(renderMonthView());
     document.body.classList.remove('show-all-days');
+  } else if (tab === 'today') {
+    // 오늘 탭: 주간 내용 고정 없음. 그날만 집중.
+    app.appendChild(renderDayPicker());
+    app.appendChild(renderTodayView());
+    document.body.classList.remove('show-all-days');
   } else {
+    // week 탭
     app.appendChild(renderStats());
     app.appendChild(renderWeeklyCard());
-    if (tab === 'week') {
-      if (window.innerWidth <= 900) app.appendChild(renderDayPicker());
-      app.appendChild(renderWeeklyGrid());
-      document.body.classList.add('show-all-days');
-      if (window.innerWidth <= 900) document.body.classList.remove('show-all-days');
-    } else {
-      app.appendChild(renderDayPicker());
-      app.appendChild(renderTodayView());
-      document.body.classList.remove('show-all-days');
-    }
+    if (window.innerWidth <= 900) app.appendChild(renderDayPicker());
+    app.appendChild(renderWeeklyGrid());
+    document.body.classList.add('show-all-days');
+    if (window.innerWidth <= 900) document.body.classList.remove('show-all-days');
     const w = getWeek(currentMonday);
-    app.appendChild(renderMatrix('아이디어', w.matrix.idea));
-    app.appendChild(renderMatrix('북마크', w.matrix.bookmark));
+    app.appendChild(renderIdeaSection(w));
+    app.appendChild(renderBookmarkSection(w));
   }
+  // 모달 컨테이너 (있으면 유지)
+  const modalRoot = document.getElementById('modal-root');
+  if (modalRoot) app.appendChild(modalRoot);
   app.appendChild(el('div', { style: 'text-align:center;padding:20px 0;font-size:11px;color:var(--text-tertiary);' },
     '클라우드 자동 저장 (Google 계정). 위 ↻ 동기화 버튼으로 즉시 저장 강제. ⤓/⤒ 는 JSON 파일 백업/복원.'));
   scheduleWeekNotifications();
@@ -1225,6 +1335,11 @@ function renderTodayView() {
   );
   view.appendChild(contactSec);
 
+  // 요청할 일 (내가 누구한테 시킬 것)
+  view.appendChild(renderRequestSection(day, 'requestsToOthers', '요청할 일', '내가 ___에게 ___ 요청'));
+  // 요청받은 일 (누가 나한테 시킨 것)
+  view.appendChild(renderRequestSection(day, 'requestsFromOthers', '요청받은 일', '___님이 ___ 요청'));
+
   // LIFE
   const lifeSec = el('section', { class: 'life-section' },
     el('h3', null, 'LIFE'),
@@ -1252,6 +1367,21 @@ function renderTodayView() {
   return view;
 }
 
+function renderRequestSection(day, key, title, placeholder) {
+  const list = day[key];
+  return el('section', { class: 'request-section ' + key },
+    el('h3', null, title, el('span', { class: 'count' }, ' (' + list.length + ')')),
+    el('div', { class: 'request-list' },
+      ...list.map((r, idx) => el('div', { class: 'request-item' + (r.checked ? ' done' : '') },
+        el('span', { class: 'check-btn', onclick: () => { r.checked = !r.checked; saveState(); render(); } }, r.checked ? '☑' : '☐'),
+        taField(r.text, placeholder, v => { r.text = v; }),
+        el('button', { class: 'del-btn', onclick: () => { list.splice(idx, 1); saveState(); render(); } }, '×'),
+      )),
+      el('button', { class: 'add-contact', onclick: () => { list.push({ checked: false, text: '' }); saveState(); render(); } }, '+ 추가'),
+    ),
+  );
+}
+
 function renderWorkSlot(day, j, week) {
   const a = day.workActions[j];
   const slot = el('div', { class: 'work-slot' + (a.status === 'done' ? ' done' : '') });
@@ -1266,8 +1396,16 @@ function renderWorkSlot(day, j, week) {
   slot.appendChild(el('div', { class: 'slot-action' + (a.status === 'done' ? ' done' : '') },
     taField(a.text, '오늘 끝낼 한 가지', v => { a.text = v; })
   ));
-  // WBS area (R/P/T)
-  const wbsArea = el('div', { class: 'wbs-area' });
+  // RPT 토글 (기본 접힘)
+  const rptExpanded = !!a.rptExpanded;
+  const tasksCount = a.tasks.filter(t => t.done).length;
+  const tasksTotalAll = a.tasks.length;
+  slot.appendChild(el('button', {
+    class: 'wbs-toggle' + (rptExpanded ? ' expanded' : ''),
+    onclick: () => { a.rptExpanded = !rptExpanded; saveState(); render(); }
+  }, (rptExpanded ? '▾' : '▸') + ' R · P · T' + (tasksTotalAll > 0 ? `  ${tasksCount}/${tasksTotalAll}` : '')));
+  // WBS area (R/P/T) - 펼쳐졌을 때만
+  const wbsArea = el('div', { class: 'wbs-area' + (rptExpanded ? '' : ' collapsed') });
   wbsArea.appendChild(el('div', { class: 'wbs-row' },
     el('div', { class: 'wbs-label' }, 'R · 리소스'),
     taField(a.resources, '필요한 것', v => { a.resources = v; }),
@@ -1299,6 +1437,168 @@ function renderWorkSlot(day, j, week) {
   wbsArea.appendChild(tasksRow);
   slot.appendChild(wbsArea);
   return slot;
+}
+
+// ─── 공통 모달 (아이디어/북마크 입력) ───
+function openItemModal({ title, item, onSave, onDelete, extraFields }) {
+  closeItemModal();
+  const overlay = el('div', { class: 'modal-overlay', id: 'item-modal-overlay', onclick: (e) => { if (e.target.id === 'item-modal-overlay') closeItemModal(); } });
+  const local = { title: item.title || '', link: item.link || '', detail: item.detail || '' };
+  if (extraFields) for (const f of extraFields) local[f.name] = item[f.name] !== undefined ? item[f.name] : (f.default !== undefined ? f.default : '');
+
+  const titleInput = el('input', { type: 'text', placeholder: '제목', value: local.title, style: 'font-size:16px;font-weight:500;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;' });
+  titleInput.addEventListener('input', () => local.title = titleInput.value);
+
+  const linkInput = el('input', { type: 'url', placeholder: '관련 링크 (선택)', value: local.link, style: 'font-size:13px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;' });
+  linkInput.addEventListener('input', () => local.link = linkInput.value);
+
+  const detailInput = el('textarea', { placeholder: '세부 내용 (선택)', rows: 4, style: 'font-size:13px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;min-height:80px;resize:vertical;' });
+  detailInput.value = local.detail;
+  detailInput.addEventListener('input', () => local.detail = detailInput.value);
+
+  const extraInputs = [];
+  if (extraFields) for (const f of extraFields) {
+    if (f.type === 'select') {
+      const sel = el('select', { style: 'font-size:13px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;' });
+      for (const opt of f.options) sel.appendChild(el('option', { value: opt, selected: local[f.name] === opt }, opt));
+      sel.addEventListener('change', () => local[f.name] = sel.value);
+      extraInputs.push(el('div', null, el('label', { style: 'font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px;font-weight:500;' }, f.label), sel));
+    }
+  }
+
+  const modal = el('div', { class: 'modal-card', onclick: e => e.stopPropagation() },
+    el('h3', { style: 'margin:0 0 14px;font-size:16px;' }, title),
+    el('div', { style: 'display:flex;flex-direction:column;gap:10px;' },
+      el('div', null, el('label', { style: 'font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px;font-weight:500;' }, '제목'), titleInput),
+      ...extraInputs,
+      el('div', null, el('label', { style: 'font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px;font-weight:500;' }, '관련 링크'), linkInput),
+      el('div', null, el('label', { style: 'font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px;font-weight:500;' }, '세부 내용'), detailInput),
+    ),
+    el('div', { style: 'display:flex;gap:8px;margin-top:16px;justify-content:flex-end;' },
+      onDelete && el('button', {
+        class: 'modal-btn modal-btn-danger',
+        onclick: () => { if (confirm('삭제하시겠습니까?')) { onDelete(); closeItemModal(); } }
+      }, '삭제'),
+      el('button', { class: 'modal-btn', onclick: closeItemModal }, '취소'),
+      el('button', { class: 'modal-btn modal-btn-primary', onclick: () => { onSave(local); closeItemModal(); } }, '저장'),
+    ),
+  );
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  setTimeout(() => titleInput.focus(), 50);
+}
+function closeItemModal() {
+  const e = document.getElementById('item-modal-overlay');
+  if (e) e.remove();
+}
+
+// ─── 아이디어 섹션 (매트릭스 + 모달 추가) ───
+function renderIdeaSection(w) {
+  const ideaCells = w.matrix.idea;
+  const totalCount = Object.values(ideaCells).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
+  const grid = el('div', { class: 'idea-matrix' }, el('div', { class: 'corner' }));
+  for (let i = 0; i < IMPORTANCE.length; i++) {
+    grid.appendChild(el('div', { class: 'col-head' + (i >= 2 ? ' high' : '') }, IMPORTANCE[i]));
+  }
+  for (const urg of URGENCY) {
+    grid.appendChild(el('div', { class: 'row-head' + (urg === '매우긴급' ? ' urgent' : '') }, urg));
+    for (const imp of IMPORTANCE) {
+      const key = imp + '|' + urg;
+      const items = ideaCells[key] || [];
+      const cell = el('div', { class: 'idea-cell' });
+      for (const it of items) {
+        cell.appendChild(el('div', { class: 'idea-item', onclick: () => {
+          openItemModal({
+            title: '아이디어 편집',
+            item: it,
+            onSave: (data) => { Object.assign(it, data); saveState(); render(); },
+            onDelete: () => { const idx = items.indexOf(it); if (idx >= 0) items.splice(idx, 1); saveState(); render(); },
+          });
+        } },
+          el('div', { class: 'idea-title' }, it.title || '(제목 없음)'),
+          it.link ? el('div', { class: 'idea-link' }, '🔗') : null,
+        ));
+      }
+      cell.appendChild(el('button', { class: 'cell-add-btn', onclick: () => {
+        openItemModal({
+          title: `아이디어 추가 (${imp} · ${urg})`,
+          item: { title: '', link: '', detail: '' },
+          onSave: (data) => {
+            items.push({ id: 'i' + Date.now() + Math.random().toString(36).slice(2,7), ...data });
+            saveState(); render();
+          },
+        });
+      } }, '+'));
+      grid.appendChild(cell);
+    }
+  }
+  return el('section', { class: 'matrix-section' },
+    el('h2', null, el('span', null, '아이디어'), el('span', { class: 'badge' }, totalCount + ' 항목 · 이 주의')),
+    grid,
+  );
+}
+
+// ─── 북마크 섹션 (카테고리 컬럼 + 모달) ───
+function renderBookmarkSection(w) {
+  const bm = w.bookmark;
+  const total = bm.items.length;
+  const cols = el('div', { class: 'bookmark-cols' });
+  for (let ci = 0; ci < bm.categories.length; ci++) {
+    const cat = bm.categories[ci];
+    const items = bm.items.filter(it => it.category === cat);
+    const col = el('div', { class: 'bookmark-col' });
+    col.appendChild(el('div', { class: 'bookmark-col-head' },
+      el('span', { class: 'bookmark-cat-name' }, cat),
+      el('span', { class: 'bookmark-cat-count' }, String(items.length)),
+      bm.categories.length > 1 ? el('button', {
+        class: 'bookmark-cat-del', title: '카테고리 삭제 (안 항목은 첫 카테고리로 이동)',
+        onclick: () => {
+          if (!confirm(`'${cat}' 카테고리를 삭제할까요? 안 항목들은 '${bm.categories[0] === cat ? bm.categories[1] : bm.categories[0]}'로 이동합니다.`)) return;
+          const fallback = bm.categories[0] === cat ? bm.categories[1] : bm.categories[0];
+          bm.items.forEach(it => { if (it.category === cat) it.category = fallback; });
+          bm.categories.splice(ci, 1);
+          saveState(); render();
+        }
+      }, '×') : null,
+    ));
+    for (const it of items) {
+      col.appendChild(el('div', { class: 'bookmark-item', onclick: () => {
+        openItemModal({
+          title: '북마크 편집',
+          item: it,
+          extraFields: [{ name: 'category', label: '카테고리', type: 'select', options: bm.categories }],
+          onSave: (data) => { Object.assign(it, data); saveState(); render(); },
+          onDelete: () => { const idx = bm.items.indexOf(it); if (idx >= 0) bm.items.splice(idx, 1); saveState(); render(); },
+        });
+      } },
+        el('div', { class: 'bookmark-title' }, it.title || '(제목 없음)'),
+        it.link ? el('div', { class: 'bookmark-link' }, '🔗 ' + it.link.replace(/^https?:\/\//, '').slice(0, 30)) : null,
+      ));
+    }
+    col.appendChild(el('button', { class: 'bookmark-add-btn', onclick: () => {
+      openItemModal({
+        title: `북마크 추가 (${cat})`,
+        item: { title: '', link: '', detail: '', category: cat },
+        extraFields: [{ name: 'category', label: '카테고리', type: 'select', options: bm.categories, default: cat }],
+        onSave: (data) => {
+          bm.items.push({ id: 'b' + Date.now() + Math.random().toString(36).slice(2,7), ...data });
+          saveState(); render();
+        },
+      });
+    } }, '+ 추가'));
+    cols.appendChild(col);
+  }
+  // 카테고리 추가 버튼
+  const addCatBtn = el('button', { class: 'bookmark-add-cat', onclick: () => {
+    const name = prompt('새 카테고리 이름:');
+    if (name && name.trim() && !bm.categories.includes(name.trim())) {
+      bm.categories.push(name.trim()); saveState(); render();
+    }
+  } }, '+ 카테고리');
+  return el('section', { class: 'matrix-section' },
+    el('h2', null, el('span', null, '북마크'), el('span', { class: 'badge' }, total + ' 항목'), addCatBtn),
+    cols,
+  );
 }
 
 function renderMatrix(title, cells) {
