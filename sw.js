@@ -1,5 +1,5 @@
 // 주간 계획 service worker — offline 캐시
-const CACHE = 'weekly-planner-v8-aifeedback';
+const CACHE = 'weekly-planner-v9-aimerge';
 const ASSETS = ['./', './weekly_planner.html', './manifest.json'];
 
 self.addEventListener('install', e => {
